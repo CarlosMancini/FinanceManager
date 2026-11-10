@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Account, AccountDraft, AccountRevision, AccountsApiService } from './accounts-api.service';
 
 @Component({
@@ -40,7 +41,7 @@ import { Account, AccountDraft, AccountRevision, AccountsApiService } from './ac
     <section class="panel" aria-labelledby="editor-title">
       <h2 id="editor-title">{{ selected() ? 'Editar conta' : 'Cadastrar conta' }}</h2>
       <form (ngSubmit)="save()">
-        <label>Nome <input name="name" [(ngModel)]="draft.name" required [disabled]="busy()"></label>
+        <label>Nome <input #nameInput name="name" [(ngModel)]="draft.name" required [disabled]="busy()"></label>
         <label>Tipo
           <select name="type" [(ngModel)]="draft.type" [disabled]="busy()">
             <option value="checking">Corrente</option>
@@ -61,8 +62,10 @@ import { Account, AccountDraft, AccountRevision, AccountsApiService } from './ac
     </section>
   `,
 })
-export class AccountsComponent implements OnInit {
+export class AccountsComponent implements OnInit, AfterViewInit {
   private readonly api = inject(AccountsApiService);
+  private readonly route = inject(ActivatedRoute);
+  @ViewChild('nameInput', { static: true }) private readonly nameInput?: ElementRef<HTMLInputElement>;
   readonly accounts = signal<Account[]>([]);
   readonly selected = signal<AccountRevision | null>(null);
   readonly busy = signal(false);
@@ -76,6 +79,10 @@ export class AccountsComponent implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  ngAfterViewInit(): void {
+    if (this.route.snapshot.queryParamMap.get('onboarding') === 'true') this.nameInput?.nativeElement.focus();
   }
 
   async load(): Promise<void> {

@@ -14,7 +14,20 @@
             "index": "src/index.html",
             "tsConfig": "tsconfig.json",
             "outputPath": "dist/finance-manager",
+            "outputHashing": "all",
             "styles": ["src/styles.css"]
+          },
+          "configurations": {
+            "development": {
+              "optimization": false,
+              "sourceMap": true
+            }
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runner": "vitest"
           }
         }
       }

@@ -101,6 +101,100 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.ToTable("OwnerSessions");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Transactions.FinancialTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)");
+
+                    b.Property<DateTimeOffset?>("CanceledAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("CreationFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("CreationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateOnly>("TransactionDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "AccountId");
+
+                    b.HasIndex("OwnerId", "CreationRequestId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FinancialTransactions_OwnerId_CreationRequestId");
+
+                    b.HasIndex("OwnerId", "TransactionDate", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_FinancialTransactions_OwnerId_TransactionDate_Id");
+
+                    b.ToTable("FinancialTransactions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialTransactions_Amount", "[Amount] >= 0.01 AND [Amount] <= 99999999999999999.99");
+
+                            t.HasCheckConstraint("CK_FinancialTransactions_Cancellation", "([Status] = N'Canceled' AND [CanceledAtUtc] IS NOT NULL) OR ([Status] = N'Active' AND [CanceledAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_FinancialTransactions_Currency", "[Currency] = N'BRL'");
+
+                            t.HasCheckConstraint("CK_FinancialTransactions_Kind", "[Kind] IN (N'Income', N'Expense')");
+
+                            t.HasCheckConstraint("CK_FinancialTransactions_Source", "[Source] = N'Manual'");
+
+                            t.HasCheckConstraint("CK_FinancialTransactions_Status", "[Status] IN (N'Active', N'Canceled')");
+                        });
+                });
+
             modelBuilder.Entity("FinanceManager.Infrastructure.Authentication.Owner", b =>
                 {
                     b.Property<Guid>("Id")
@@ -202,6 +296,35 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.HasIndex("AccountId");
 
                     b.ToTable("FinancialAccountAudits", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.FinancialTransactionAudit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "TransactionId");
+
+                    b.ToTable("FinancialTransactionAudits", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -353,11 +476,31 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Transactions.FinancialTransaction", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Accounts.FinancialAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "AccountId")
+                        .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.FinancialAccountAudit", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Accounts.FinancialAccount", null)
                         .WithMany()
                         .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.FinancialTransactionAudit", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Transactions.FinancialTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "TransactionId")
+                        .HasPrincipalKey("OwnerId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

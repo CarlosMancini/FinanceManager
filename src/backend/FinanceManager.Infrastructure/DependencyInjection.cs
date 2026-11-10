@@ -1,5 +1,6 @@
 using FinanceManager.Application.Accounts;
 using FinanceManager.Application.Authentication;
+using FinanceManager.Application.Transactions;
 using FinanceManager.Infrastructure.Authentication;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -34,6 +35,10 @@ public static class DependencyInjection
         services.AddSingleton<OwnerTicketStore>();
         services.AddScoped<IFinancialAccountRepository, SqlFinancialAccountRepository>();
         services.AddScoped<FinancialAccountService>();
+        services.AddScoped<ITransactionCommandRepository, SqlTransactionCommandRepository>();
+        services.AddScoped<TransactionCommandService>();
+        services.AddScoped<ITransactionHistoryRepository, SqlTransactionHistoryRepository>();
+        services.AddScoped<TransactionHistoryService>();
         return services;
     }
 }

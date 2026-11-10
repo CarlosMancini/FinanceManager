@@ -18,3 +18,14 @@ button:disabled { opacity: .65; cursor: default; }
 .accounts { list-style: none; padding: 0; margin-bottom: 0; }
 .accounts li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; padding-block: .75rem; border-top: 1px solid #dce3ef; }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.actions h2 { margin-right: auto; }
+.button-link { display: inline-block; background: #154982; color: white; text-decoration: none; padding: .55rem .75rem; border-radius: .4rem; }
+.filters { max-width: none; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); align-items: end; }
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .75rem; margin-block: 1rem; }
+.totals span { display: grid; padding: .75rem; background: #eef3f9; border-radius: .4rem; }
+.transactions { list-style: none; padding: 0; }
+.transactions li { display: flex; justify-content: space-between; gap: 1rem; padding-block: .75rem; border-top: 1px solid #dce3ef; }
+dialog { max-width: min(28rem, calc(100vw - 2rem)); border: 1px solid #657794; border-radius: .7rem; padding: 1.25rem; color: inherit; }
+dialog::backdrop { background: rgb(22 33 58 / .55); }
+dialog h2 { margin-top: 0; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #f0a202; outline-offset: 2px; }
