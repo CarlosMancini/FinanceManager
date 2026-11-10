@@ -1,16 +1,3 @@
-<!--
-Sync Impact Report — material temporário de revisão; remover antes do commit.
-Versão: 1.0.0 → 1.1.0 (MINOR: ampliação dos princípios e da governança).
-Princípios modificados:
-- II. Arquitetura modular → II. Arquitetura modular, DDD e MVC.
-- VI. Critério de conclusão → VI. Testes com xUnit e critério de conclusão.
-Seções adicionadas: Restrições técnicas e convenções; Fluxo de desenvolvimento e revisão.
-Governança ampliada: precedência constitucional, emendas e versionamento semântico.
-Seções removidas: nenhuma; títulos estruturais alinhados ao template ativo.
-Pendências: TODO(RATIFICATION_DATE): confirmar a data original de adoção,
-ausente na versão 1.0.0. Templates e planos não foram alterados neste fluxo.
--->
-
 # FinanceManager Constitution
 
 Escopo inicial pessoal e local.
@@ -65,10 +52,13 @@ Entrada manual, arquivos e agregadores convergem para o modelo interno por adapt
 
 ### VI. Testes com xUnit e critério de conclusão
 
-A aplicação DEVE usar xUnit para os testes automatizados do backend. Os testes DEVEM
-cobrir regras de domínio e casos de uso dos serviços de aplicação. Uma tarefa somente
-termina quando os critérios associados passam por verificação e os testes relevantes
-passam. Mudanças de comportamento DEVEM atualizar os testes na mesma entrega.
+A aplicação DEVE usar xUnit para os testes automatizados do backend. Cada regra de
+negócio, inclusive as regras existentes, DEVE ser validada por testes unitários que
+verifiquem seus resultados esperados, incluindo os casos de rejeição e os limites
+definidos pela própria regra. Os testes também DEVEM cobrir os casos de uso dos
+serviços de aplicação. Uma tarefa somente termina quando os critérios associados
+passam por verificação e os testes relevantes passam. Mudanças de comportamento DEVEM
+atualizar os testes na mesma entrega.
 
 Cobrir regras monetárias e temporais, acesso indevido, falhas parciais e concorrência
 conforme o risco da feature. Validar o fluxo pela interface e pela API e verificar
@@ -92,7 +82,9 @@ As tarefas DEVEM refletir essas decisões e os critérios de aceitação da espe
 
 Cada revisão de entrega DEVE verificar a conformidade constitucional, a passagem dos
 endpoints pelos serviços de aplicação, as convenções de nomes e mensagens e os testes
-relevantes. Conflitos encontrados DEVEM ser resolvidos antes de concluir a entrega.
+relevantes. Para cada regra de negócio criada ou alterada na entrega, a revisão DEVE
+identificar os testes unitários que a validam. Conflitos encontrados DEVEM ser
+resolvidos antes de concluir a entrega.
 
 ## Governance
 
@@ -112,4 +104,4 @@ ampliações materiais das regras; PATCH para esclarecimentos e correções sem 
 de obrigação. A revisão de conformidade DEVE identificar artefatos divergentes para
 correção, sem modificar templates ou planos durante o fluxo de atualização constitucional.
 
-**Version**: 1.1.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-09
+**Version**: 1.2.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-09
