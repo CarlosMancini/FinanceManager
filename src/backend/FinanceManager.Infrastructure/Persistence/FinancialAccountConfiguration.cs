@@ -20,6 +20,7 @@ internal sealed class FinancialAccountConfiguration : IEntityTypeConfiguration<F
             table.HasCheckConstraint("CK_FinancialAccounts_Type", "[Type] IN (N'Checking', N'Savings', N'Wallet')");
         });
         account.HasKey(row => row.Id);
+        account.HasAlternateKey(row => new { row.OwnerId, row.Id });
         account.Property(row => row.Id).ValueGeneratedNever();
         account.HasOne<Owner>().WithMany().HasForeignKey(row => row.OwnerId).OnDelete(DeleteBehavior.Restrict);
         account.Property(row => row.Name).IsRequired().HasMaxLength(120);

@@ -1,19 +1,19 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { RouterOutlet, provideRouter } from '@angular/router';
+import { RouterLink, RouterOutlet, provideRouter } from '@angular/router';
 import { routes } from './app/app.routes';
 import { AuthService, sessionExpiredInterceptor } from './app/auth/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, RouterLink],
   template: `
     <main>
       <header class="header">
         <h1>FinanceManager</h1>
         @if (auth.username()) {
-          <button type="button" (click)="logout()" [disabled]="busy()">Sair</button>
+          <nav class="actions"><a routerLink="/transactions">Movimentações</a><a routerLink="/accounts">Contas</a><button type="button" (click)="logout()" [disabled]="busy()">Sair</button></nav>
         }
       </header>
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }

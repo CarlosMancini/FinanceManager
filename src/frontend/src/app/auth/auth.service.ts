@@ -62,7 +62,7 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   return next(request).pipe(catchError((error: unknown) => {
     if (error instanceof HttpErrorResponse && error.status === 401 &&
-        (request.url.startsWith('/api/accounts') || request.url === '/api/auth/logout')) {
+        (request.url.startsWith('/api/accounts') || request.url.startsWith('/api/transactions') || request.url === '/api/auth/logout')) {
       auth.expire();
     }
     return throwError(() => error);

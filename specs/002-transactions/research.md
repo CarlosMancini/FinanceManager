@@ -47,3 +47,35 @@
 **Alternativas avaliadas.** Somar só a página mudaria os resultados. Ponto flutuante pode perder centavos. Uma tabela de totais pré-calculados adicionaria sincronização a cada escrita e a cada filtro.
 
 [Tipos de retorno de SUM no SQL Server](https://learn.microsoft.com/en-us/sql/t-sql/functions/sum-transact-sql?view=sql-server-ver17)
+
+## Navegação condicionada por contas
+
+**Decisão.** Reutilizar a consulta autenticada de contas em guards de rota. A entrada pós-login resolve primeiro a lista: zero contas abre o cadastro de conta; caso contrário, abre o histórico. A ação e a rota de nova movimentação verificam a existência de conta ativa, enquanto contas arquivadas continuam visíveis no histórico.
+
+**Motivo.** Uma única fonte de decisão evita divergência entre botão, URL direta e redirecionamento após login, sem duplicar regras financeiras no cliente.
+
+**Alternativas avaliadas.** Decidir apenas dentro de cada componente causaria transição visual para telas inválidas e repetiria consultas. Alterar a API de autenticação para devolver contas acoplaria sessão ao módulo financeiro.
+
+## Entrada monetária em BRL
+
+**Decisão.** Manter no formulário uma string visual `R$ X,XX` construída a partir de dígitos e converter deterministicamente para a string decimal invariante antes do envio. Não converter o valor para `Number`. A validação final continua no servidor.
+
+**Motivo.** A abordagem preserva centavos e o contrato de precisão, permite edição previsível e mantém apresentação brasileira separada do transporte invariante.
+
+**Alternativas avaliadas.** `input type="number"` não apresenta moeda brasileira de forma consistente. Ponto flutuante pode perder centavos. Uma biblioteca de máscara acrescentaria dependência para uma transformação pequena e determinística.
+
+## Diálogos e cadastros consecutivos
+
+**Decisão.** Usar diálogos modais acessíveis controlados pelo componente. O diálogo pós-cadastro só aparece depois do sucesso confirmado. **Sim** inicia outro rascunho com nova chave de idempotência; **Não** ou fechamento retorna ao histórico. Correção e cancelamento só chamam a API após confirmação explícita.
+
+**Motivo.** O estado de tentativa permanece inequívoco e a confirmação reduz alterações acidentais sem mudar o contrato HTTP nem as invariantes do domínio.
+
+**Alternativas avaliadas.** `window.confirm` oferece pouco controle de texto, acessibilidade e testes. Reutilizar a mesma chave após **Sim** transformaria um novo lançamento intencional em reenvio da tentativa anterior.
+
+## Testes da interface
+
+**Decisão.** Habilitar o builder de testes unitários já fornecido por `@angular/build` e fixar Vitest 4.0.8 como dependência de desenvolvimento. Cobrir guards, conversão monetária e decisões dos diálogos em testes de componente, mantendo a validação completa no navegador.
+
+**Motivo.** As novas regras são predominantemente de apresentação e navegação; verificá-las apenas por testes do backend não detectaria regressões de botão, rota, foco ou envio prematuro.
+
+**Alternativas avaliadas.** Manter somente validação manual reduziria a repetibilidade. Introduzir uma suíte ponta a ponta separada ampliaria ferramentas e manutenção além do necessário para estes componentes locais.

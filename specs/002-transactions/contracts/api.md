@@ -16,6 +16,13 @@ Cadastro e edição recebem `accountId`, `kind` (`income` ou `expense`), `amount
 
 No cadastro, a SPA mantém chave e corpo da tentativa em memória para reenvio após resultado incerto. Uma nova tentativa intencional usa nova chave. Em edição ou cancelamento, usa uma única ETag forte do detalhe, com aspas, em `If-Match`. ETag fraca, curinga, múltiplas tags ou valor malformado recebem erro. Após `412`, a SPA pede para recarregar o detalhe antes de uma nova tentativa.
 
+## Contrato da interface
+
+- O campo visual de valor usa `R$ X,XX`; antes do envio, a SPA produz `amount` como string decimal invariante com duas casas. A API não recebe símbolo de moeda nem separador de milhares.
+- O diálogo **“Adicionar mais uma movimentação?”** é apresentado somente após `201` ou reenvio equivalente confirmado. **Sim** cria uma nova chave e um novo corpo; **Não** ou fechamento retorna ao histórico.
+- Confirmações de correção e cancelamento acontecem antes dos respectivos `PUT`. Recusar ou fechar não envia requisição. Aceitar envia a ETag atualmente carregada e preserva o tratamento de `412`.
+- A disponibilidade e os redirecionamentos usam `GET /api/accounts`: zero contas abre o cadastro; ausência de conta ativa desabilita a ação de nova movimentação.
+
 ## Filtros e paginação
 
 | Campo | Regra |
