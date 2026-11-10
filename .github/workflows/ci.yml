@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet packages
+        run: dotnet restore FinanceManager.slnx --locked-mode
+
+      - name: Build backend
+        run: dotnet build FinanceManager.slnx --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test --project tests/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --configuration Release --no-build
+
+      - name: Run integration tests with SQL Server
+        shell: bash
+        run: |
+          MSSQL_SA_PASSWORD="Ci9!$(openssl rand -hex 24)"
+          export MSSQL_SA_PASSWORD
+          echo "::add-mask::$MSSQL_SA_PASSWORD"
+          docker run --detach --name finance-manager-sql \
+            --publish 127.0.0.1:1433:1433 \
+            --env ACCEPT_EULA=Y --env MSSQL_PID=Developer --env MSSQL_SA_PASSWORD \
+            mcr.microsoft.com/mssql/server:2025-latest
+
+          export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"
+          if ! timeout 120s bash -c '
+            until docker exec --env SQLCMDPASSWORD finance-manager-sql \
+              /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q "SELECT 1" >/dev/null 2>&1; do
+              sleep 2
+            done
+          '; then
+            echo "SQL Server did not become ready within 120 seconds." >&2
+            docker logs finance-manager-sql
+            exit 1
+          fi
+
+          export ConnectionStrings__FinanceManagerTests="Server=127.0.0.1,1433;Database=master;User ID=sa;Password=$MSSQL_SA_PASSWORD;Encrypt=True;TrustServerCertificate=True"
+          dotnet test --project tests/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release --no-build
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: src/frontend/.node-version
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Build Angular
+        run: npm run build
