@@ -15,7 +15,7 @@ Acompanhar obrigações em aberto e seus vencimentos, baixar pelo valor integral
 | Testes | xUnit v3 4.0.3 com Microsoft Testing Platform, relógio controlado, `WebApplicationFactory`, bases SQL sintéticas separadas e validação no navegador. |
 | Plataforma e escopo | Monólito modular web responsivo, em loopback HTTPS para um titular. Operações manuais em BRL. |
 | Desempenho | Paginar no SQL com até 100 registros por resposta e agregar no banco sobre o filtro inteiro. Verificar com volume sintético que a consulta não carrega todo o histórico na aplicação. |
-| Dependências internas | A fundação fornece sessão e contas. A implementação começa após a 002/T023, incluindo o modelo de movimentações e sua migração. |
+| Dependências internas | A fundação fornece sessão e contas. A feature 002, incluindo sua validação T033, está concluída e fornece o modelo de movimentações, migração, API, interface e testes. |
 
 ## Verificação da constituição
 
