@@ -2,7 +2,7 @@
 
 ## Limites e dependências
 
-**Decisão.** Entregar após a feature 002, incluindo a migração de movimentações e os testes de sua etapa T023. Reutilizar as versões fixadas na fundação, a sessão da API, a proteção CSRF, os serviços e as portas de movimentações. O checkout tem a fundação implementada e os artefatos de desenho da 002.
+**Decisão.** Reutilizar a feature 002 concluída, incluindo sua validação T033, o modelo e a migração de movimentações, a API, a interface, os testes, os serviços e as portas existentes. Reutilizar também as versões fixadas na fundação, a sessão da API e a proteção CSRF.
 
 **Motivo.** A 002 é a fonte do realizado. O vínculo usa o mesmo registro de despesa, e suas operações de edição e cancelamento precisam reconhecer baixas ativas.
 
@@ -26,7 +26,7 @@
 
 ## Reenvio e origem
 
-**Decisão.** Persistir chave por titular, impressão digital da solicitação normalizada e recibo imutável. Consultar o recibo antes das regras dependentes de estado e reler após rollback de uma corrida. Retornar conflito para mesma chave com entrada diferente. A despesa gerada tem origem `BillSettlement` e usa o recibo da baixa para deduplicação. A despesa vinculada preserva sua origem.
+**Decisão.** Persistir chave por titular, impressão digital da solicitação normalizada e recibo imutável. A impressão digital inclui os tokens de versão enviados no pedido original, não as revisões correntes relidas do banco. Consultar o recibo antes das regras dependentes de estado e reler após rollback de uma corrida. Retornar conflito para mesma chave com entrada diferente. A despesa gerada tem origem `BillSettlement` e usa o recibo da baixa para deduplicação. A despesa vinculada preserva sua origem.
 
 **Motivo.** Uma resposta perdida pode ser recuperada mesmo após a reversão. A origem e a auditoria distinguem criação manual, vínculo e criação pela baixa. A SPA consulta novamente o detalhe para mostrar o estado atual.
 

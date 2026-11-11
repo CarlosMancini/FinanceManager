@@ -18,7 +18,8 @@ internal sealed class FinancialTransactionConfiguration : IEntityTypeConfigurati
             table.HasCheckConstraint("CK_FinancialTransactions_Amount", "[Amount] >= 0.01 AND [Amount] <= 99999999999999999.99");
             table.HasCheckConstraint("CK_FinancialTransactions_Currency", "[Currency] = N'BRL'");
             table.HasCheckConstraint("CK_FinancialTransactions_Kind", "[Kind] IN (N'Income', N'Expense')");
-            table.HasCheckConstraint("CK_FinancialTransactions_Source", "[Source] = N'Manual'");
+            table.HasCheckConstraint("CK_FinancialTransactions_Source", "[Source] IN (N'Manual', N'BillSettlement')");
+            table.HasCheckConstraint("CK_FinancialTransactions_CreationRequest", "([Source] = N'Manual' AND [CreationRequestId] IS NOT NULL AND [CreationFingerprint] IS NOT NULL) OR ([Source] = N'BillSettlement' AND [CreationRequestId] IS NULL AND [CreationFingerprint] IS NULL)");
             table.HasCheckConstraint("CK_FinancialTransactions_Status", "[Status] IN (N'Active', N'Canceled')");
             table.HasCheckConstraint("CK_FinancialTransactions_Cancellation", "([Status] = N'Canceled' AND [CanceledAtUtc] IS NOT NULL) OR ([Status] = N'Active' AND [CanceledAtUtc] IS NULL)");
         });
@@ -34,11 +35,12 @@ internal sealed class FinancialTransactionConfiguration : IEntityTypeConfigurati
         transaction.Property(row => row.TransactionDate).HasColumnType("date");
         transaction.Property(row => row.Description).IsRequired().HasMaxLength(200);
         transaction.Property(row => row.Currency).IsRequired().HasMaxLength(3);
-        transaction.Property(row => row.Source).HasConversion<string>().HasMaxLength(8);
+        transaction.Property(row => row.Source).HasConversion<string>().HasMaxLength(16);
         transaction.Property(row => row.Status).HasConversion<string>().HasMaxLength(8);
-        transaction.Property(row => row.CreationFingerprint).IsRequired().HasMaxLength(32).IsFixedLength();
+        transaction.Property(row => row.CreationFingerprint).HasMaxLength(32).IsFixedLength();
         transaction.Property<byte[]>(VersionProperty).IsRowVersion();
-        transaction.HasIndex(row => new { row.OwnerId, row.CreationRequestId }).IsUnique().HasDatabaseName(RequestIndex);
+        transaction.HasIndex(row => new { row.OwnerId, row.CreationRequestId }).IsUnique()
+            .HasFilter("[CreationRequestId] IS NOT NULL").HasDatabaseName(RequestIndex);
         transaction.HasIndex(row => new { row.OwnerId, row.TransactionDate, row.Id }).IsDescending(false, true, true)
             .HasDatabaseName(HistoryIndex);
 

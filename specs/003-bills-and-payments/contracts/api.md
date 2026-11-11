@@ -12,13 +12,13 @@ API JSON de mesma origem. Reutilizar [sessão, HTTPS, CSRF e formato de erros da
 | `PUT /api/bills/{id}` | `If-Match` e campos do cadastro. | `200`, detalhe e nova ETag. |
 | `PUT /api/bills/{id}/status` | `If-Match` e `{"status":"canceled"}`. | `200`, detalhe e nova ETag. |
 
-Valores monetários são strings decimais invariantes. Na entrada, rejeitar expoente, separador de milhares, valor não positivo e mais de duas casas. Valores de resposta têm duas casas. Datas civis usam `YYYY-MM-DD`. Itens e detalhe contêm `id`, campos do cadastro, `currency` (`BRL`) e `status`. O detalhe também contém `activeSettlement`, nulo em ausência de baixa ou com o recibo da baixa ativa.
+Valores monetários são strings decimais invariantes. Na entrada, rejeitar expoente, separador de milhares, valor não positivo e mais de duas casas. Valores de resposta têm duas casas. Datas civis usam `YYYY-MM-DD`. Itens e detalhe contêm `id`, campos do cadastro, `currency` (`BRL`) e `status`, cujo valor é `upcoming`, `dueToday`, `overdue`, `paid` ou `canceled`; `open` e `all` são apenas valores de filtro. O detalhe também contém `activeSettlement`, nulo em ausência de baixa ou com o recibo da baixa ativa.
 
 A ETag forte do detalhe inclui a revisão persistida e a situação derivada. Uma mudança de situação à meia-noite invalida uma ETag anterior. Mutações da obrigação aceitam uma única tag forte, entre aspas, em `If-Match`. Após conflito de versão, a interface orienta a recarregar o detalhe ou a selecionar novamente a despesa.
 
 ### Filtros e total
 
-- `status` aceita `open` (padrão), `upcoming`, `dueToday`, `overdue`, `paid`, `canceled` ou `all`. `open` reúne as três situações temporais em aberto.
+- `status` aceita `open` (padrão), `upcoming`, `dueToday`, `overdue`, `paid`, `canceled` ou `all`. `open` reúne as três situações temporais em aberto. Com `all`, o total ainda soma somente obrigações abertas que passam pelo período.
 - `from` e `to` limitam o vencimento de forma inclusiva. Omitir ambas para consultar sem limite de período, ou enviar ambas com `from <= to`.
 - `page` e `pageSize` seguem a convenção da [feature 002](../../002-transactions/contracts/api.md#filtros-e-paginação). Ordenar por `dueDate ASC, id ASC`. A resposta contém `items`, `page`, `pageSize`, `totalCount` e `totals.openAmount`. A soma considera todas as obrigações em aberto que passam pelo filtro, mesmo fora da página. Filtro vazio ou só de pagas ou canceladas retorna `"0.00"`. Página além do fim retorna lista vazia e preserva contagem e total. Cada resposta é consistente internamente.
 
@@ -45,13 +45,15 @@ Usar `application/problem+json` com `status`, `title`, `code` e, quando aplicáv
 |---|---|---|
 | 400 | `VALIDATION_FAILED` | Corpo, filtros, paginação, valor, descrição ou data inválidos. |
 | 400 | `INVALID_IDEMPOTENCY_KEY` | Chave ausente, vazia, inválida ou cabeçalho repetido. |
-| 400 | `INVALID_BILL_VERSION`, `INVALID_TRANSACTION_VERSION` | Tag exigida no corpo ausente ou inválida, ou `If-Match` malformado. |
+| 400 | `INVALID_BILL_VERSION` | `billVersion` ausente ou inválida no corpo da baixa, ou `If-Match` da obrigação malformado. |
+| 400 | `INVALID_TRANSACTION_VERSION` | `transactionVersion` ausente ou inválida no corpo da baixa vinculada. |
 | 401, 403 | `SESSION_REQUIRED`, `INVALID_CSRF_TOKEN` | Convenções da fundação. |
 | 404 | `BILL_NOT_FOUND`, `SETTLEMENT_NOT_FOUND`, `ACCOUNT_NOT_FOUND`, `TRANSACTION_NOT_FOUND` | Recurso ausente ou fora da titularidade, inclusive baixa pertencente a outra obrigação. |
 | 409 | `BILL_NOT_OPEN` | A obrigação está paga ou cancelada e a operação exige que esteja em aberto. |
 | 409 | `EXPENSE_NOT_ELIGIBLE` | Movimentação ativa e do tipo despesa com valor igual e sem baixa ativa é requisito do vínculo. |
 | 409 | `ACCOUNT_ARCHIVED` | Criação de despesa em conta arquivada. |
 | 409 | `IDEMPOTENCY_KEY_CONFLICT` | A chave já pertence a outro pedido normalizado. |
+| 409 | `TRANSACTION_LINKED` | Correção ou cancelamento de movimentação bloqueado por baixa ativa. |
 | 412 | `STALE_BILL_VERSION` | A ETag enviada em `If-Match` é diferente da atual. |
 | 409 | `STALE_BILL_VERSION`, `STALE_TRANSACTION_VERSION` | Uma revisão enviada no corpo da baixa é diferente da atual. |
 | 428 | `BILL_VERSION_REQUIRED` | Ausência de `If-Match` em edição ou cancelamento de obrigação. |

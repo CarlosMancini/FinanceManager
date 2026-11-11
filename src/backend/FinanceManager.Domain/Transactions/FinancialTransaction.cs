@@ -1,7 +1,7 @@
 namespace FinanceManager.Domain.Transactions;
 
 public enum TransactionKind { Income, Expense }
-public enum TransactionSource { Manual }
+public enum TransactionSource { Manual, BillSettlement }
 public enum TransactionStatus { Active, Canceled }
 
 public sealed class FinancialTransaction
@@ -19,13 +19,9 @@ public sealed class FinancialTransaction
         if (creationFingerprint is not { Length: 32 }) throw new ArgumentException("A impressão digital deve ter 32 bytes.", nameof(creationFingerprint));
         EnsureUtc(nowUtc);
 
-        Id = Guid.NewGuid();
-        OwnerId = ownerId;
+        Initialize(ownerId, accountId, kind, amount, transactionDate, description, today, nowUtc);
         CreationRequestId = creationRequestId;
         CreationFingerprint = creationFingerprint.ToArray();
-        CreatedAtUtc = nowUtc;
-        UpdatedAtUtc = nowUtc;
-        Apply(accountId, kind, amount, transactionDate, description, today);
     }
 
     public Guid Id { get; private set; }
@@ -38,11 +34,21 @@ public sealed class FinancialTransaction
     public string Currency { get; private set; } = "BRL";
     public TransactionSource Source { get; private set; } = TransactionSource.Manual;
     public TransactionStatus Status { get; private set; } = TransactionStatus.Active;
-    public Guid CreationRequestId { get; private set; }
-    public byte[] CreationFingerprint { get; private set; } = [];
+    public Guid? CreationRequestId { get; private set; }
+    public byte[]? CreationFingerprint { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
     public DateTimeOffset? CanceledAtUtc { get; private set; }
+
+    public static FinancialTransaction CreateForBillSettlement(Guid ownerId, Guid accountId, decimal amount,
+        DateOnly transactionDate, string description, DateOnly today, DateTimeOffset nowUtc)
+    {
+        EnsureUtc(nowUtc);
+        var transaction = new FinancialTransaction { Source = TransactionSource.BillSettlement };
+        transaction.Initialize(ownerId, accountId, TransactionKind.Expense, amount, transactionDate,
+            description, today, nowUtc);
+        return transaction;
+    }
 
     public bool Edit(Guid accountId, TransactionKind kind, decimal amount, DateOnly transactionDate,
         string description, DateOnly today, DateTimeOffset nowUtc)
@@ -70,6 +76,25 @@ public sealed class FinancialTransaction
         UpdatedAtUtc = nowUtc;
         CanceledAtUtc = nowUtc;
         return true;
+    }
+
+    public void Touch(DateTimeOffset nowUtc)
+    {
+        EnsureActive();
+        EnsureUtc(nowUtc);
+        UpdatedAtUtc = nowUtc;
+    }
+
+    private void Initialize(Guid ownerId, Guid accountId, TransactionKind kind, decimal amount,
+        DateOnly transactionDate, string description, DateOnly today, DateTimeOffset nowUtc)
+    {
+        if (ownerId == Guid.Empty) throw new ArgumentException("O titular é obrigatório.", nameof(ownerId));
+        EnsureUtc(nowUtc);
+        Id = Guid.NewGuid();
+        OwnerId = ownerId;
+        CreatedAtUtc = nowUtc;
+        UpdatedAtUtc = nowUtc;
+        Apply(accountId, kind, amount, transactionDate, description, today);
     }
 
     private void Apply(Guid accountId, TransactionKind kind, decimal amount, DateOnly transactionDate,

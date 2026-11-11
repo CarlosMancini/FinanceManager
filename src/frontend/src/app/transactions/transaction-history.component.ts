@@ -30,7 +30,7 @@ import { TransactionHistory, TransactionHistoryApiService } from './transaction-
       @if (!loading() && result(); as history) {
         <div class="totals"><span>Receitas <strong>{{ money(history.totals.income) }}</strong></span><span>Despesas <strong>{{ money(history.totals.expense) }}</strong></span><span>Líquido <strong>{{ money(history.totals.net) }}</strong></span></div>
         @if (history.items.length === 0) { <p>Nenhuma movimentação encontrada.</p> }
-        <ul class="transactions">@for (item of history.items; track item.id) { <li><div><strong>{{ item.description }}</strong><div>{{ item.transactionDate }} · {{ item.kind === 'income' ? 'Receita' : 'Despesa' }} · {{ money(item.amount) }} @if (item.status === 'canceled') { · <strong>Cancelada</strong> }</div></div><a [routerLink]="['/transactions', item.id]">Detalhe</a></li> }</ul>
+        <ul class="transactions">@for (item of history.items; track item.id) { <li><div><strong>{{ item.description }}</strong><div>{{ item.transactionDate }} · {{ item.kind === 'income' ? 'Receita' : 'Despesa' }} · {{ money(item.amount) }} @if (item.source === 'billSettlement') { · Baixa de obrigação } @if (item.status === 'canceled') { · <strong>Cancelada</strong> }</div></div><a [routerLink]="['/transactions', item.id]">Detalhe</a></li> }</ul>
         <div class="actions"><button type="button" (click)="page(history.page - 1)" [disabled]="history.page <= 1 || loading()">Anterior</button><span>Página {{ history.page }}</span><button type="button" (click)="page(history.page + 1)" [disabled]="history.page * history.pageSize >= history.totalCount || loading()">Próxima</button></div>
       }
     </section>

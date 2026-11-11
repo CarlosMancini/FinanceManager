@@ -4,7 +4,7 @@ namespace FinanceManager.Application.Transactions;
 
 public enum TransactionError
 {
-    None, InvalidInput, AccountNotFound, AccountArchived, NotFound, IdempotencyConflict, Canceled, StaleVersion
+    None, InvalidInput, AccountNotFound, AccountArchived, NotFound, IdempotencyConflict, Canceled, StaleVersion, Linked
 }
 
 public enum TransactionChange { Created, Edited, Canceled }
