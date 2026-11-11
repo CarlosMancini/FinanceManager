@@ -36,10 +36,10 @@ internal sealed class SqlTransactionCommandRepository(FinanceManagerDbContext da
         {
             await dbTransaction.RollbackAsync(cancellationToken);
             database.ChangeTracker.Clear();
-            var existing = await FindByRequestAsync(transaction.OwnerId, transaction.CreationRequestId, cancellationToken);
+            var existing = await FindByRequestAsync(transaction.OwnerId, transaction.CreationRequestId!.Value, cancellationToken);
             if (existing is null) throw;
             return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-                existing.Transaction.CreationFingerprint, transaction.CreationFingerprint)
+                existing.Transaction.CreationFingerprint!, transaction.CreationFingerprint!)
                 ? new(TransactionError.None, existing, true)
                 : new(TransactionError.IdempotencyConflict);
         }
@@ -49,6 +49,9 @@ internal sealed class SqlTransactionCommandRepository(FinanceManagerDbContext da
         TransactionChange change, DateTimeOffset nowUtc, bool accountChanged, CancellationToken cancellationToken)
     {
         await using var dbTransaction = await database.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+        if (await database.BillSettlements.AnyAsync(row => row.OwnerId == transaction.OwnerId &&
+            row.TransactionId == transaction.Id && row.ReversedAtUtc == null, cancellationToken))
+            return new(TransactionError.Linked);
         if (accountChanged)
         {
             var account = await database.FinancialAccounts.SingleOrDefaultAsync(row =>

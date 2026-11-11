@@ -15,7 +15,14 @@ internal static class AccountVersionHeaders
         {
             return VersionHeaderError.Missing;
         }
-        if (values.Count != 1 || !EntityTagHeaderValue.TryParse(values[0], out var tag) ||
+        if (values.Count != 1) return VersionHeaderError.Invalid;
+        return Parse(values[0], out version);
+    }
+
+    public static VersionHeaderError Parse(string? value, out byte[] version)
+    {
+        version = [];
+        if (!EntityTagHeaderValue.TryParse(value, out var tag) ||
             tag.IsWeak || tag.Tag.Length < 2)
         {
             return VersionHeaderError.Invalid;

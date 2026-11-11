@@ -1,5 +1,6 @@
 using FinanceManager.Application.Accounts;
 using FinanceManager.Application.Authentication;
+using FinanceManager.Application.Bills;
 using FinanceManager.Application.Transactions;
 using FinanceManager.Infrastructure.Authentication;
 using FinanceManager.Infrastructure.Persistence;
@@ -39,6 +40,10 @@ public static class DependencyInjection
         services.AddScoped<TransactionCommandService>();
         services.AddScoped<ITransactionHistoryRepository, SqlTransactionHistoryRepository>();
         services.AddScoped<TransactionHistoryService>();
+        services.AddScoped<IBillRepository, SqlBillRepository>();
+        services.AddScoped<BillService>();
+        services.AddScoped<IBillSettlementRepository, SqlBillSettlementRepository>();
+        services.AddScoped<BillSettlementService>();
         return services;
     }
 }

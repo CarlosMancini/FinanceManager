@@ -1,6 +1,8 @@
 using FinanceManager.Domain.Accounts;
 using FinanceManager.Domain.Authentication;
+using FinanceManager.Domain.Bills;
 using FinanceManager.Domain.Transactions;
+using FinanceManager.Application.Bills;
 using FinanceManager.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -15,12 +17,27 @@ public sealed class FinanceManagerDbContext(DbContextOptions<FinanceManagerDbCon
 
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
     public DbSet<FinancialTransaction> FinancialTransactions => Set<FinancialTransaction>();
+    public DbSet<Bill> Bills => Set<Bill>();
+    public DbSet<BillSettlement> BillSettlements => Set<BillSettlement>();
+    public DbSet<BillSettlementRequest> BillSettlementRequests => Set<BillSettlementRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         builder.ApplyConfiguration(new FinancialAccountConfiguration());
         builder.ApplyConfiguration(new FinancialTransactionConfiguration());
+        builder.ApplyConfiguration(new BillConfiguration());
+        builder.ApplyConfiguration(new BillSettlementConfiguration());
+        builder.ApplyConfiguration(new BillSettlementRequestConfiguration());
+        builder.Entity<BillAudit>(audit =>
+        {
+            audit.ToTable("BillAudits");
+            audit.HasKey(row => row.Id);
+            audit.Property(row => row.Id).ValueGeneratedOnAdd();
+            audit.Property(row => row.Action).HasConversion<string>().HasMaxLength(10);
+            audit.HasOne<Bill>().WithMany().HasForeignKey(row => new { row.OwnerId, row.BillId })
+                .HasPrincipalKey(row => new { row.OwnerId, row.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<FinancialTransactionAudit>(audit =>
         {
             audit.ToTable("FinancialTransactionAudits");

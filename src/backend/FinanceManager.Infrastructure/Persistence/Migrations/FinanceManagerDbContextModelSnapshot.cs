@@ -22,6 +22,44 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FinanceManager.Application.Bills.BillSettlementRequest", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BillId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("SettlementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("OwnerId", "IdempotencyKey");
+
+                    b.HasIndex("OwnerId", "SettlementId");
+
+                    b.ToTable("BillSettlementRequests", (string)null);
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Accounts.FinancialAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -101,6 +139,100 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.ToTable("OwnerSessions");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Bills.Bill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)");
+
+                    b.Property<DateTimeOffset?>("CanceledAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DueDate", "Id");
+
+                    b.ToTable("Bills", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Bills_Amount", "[Amount] >= 0.01 AND [Amount] <= 99999999999999999.99");
+
+                            t.HasCheckConstraint("CK_Bills_Currency", "[Currency] = N'BRL'");
+                        });
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Bills.BillSettlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BillId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ReversedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "BillId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_BillSettlements_OwnerId_BillId_Active")
+                        .HasFilter("[ReversedAtUtc] IS NULL");
+
+                    b.HasIndex("OwnerId", "TransactionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_BillSettlements_OwnerId_TransactionId_Active")
+                        .HasFilter("[ReversedAtUtc] IS NULL");
+
+                    b.ToTable("BillSettlements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BillSettlements_Origin", "[Origin] IN (N'LinkedExpense', N'CreatedExpense')");
+                        });
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Transactions.FinancialTransaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -120,12 +252,11 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<byte[]>("CreationFingerprint")
-                        .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("binary(32)")
                         .IsFixedLength();
 
-                    b.Property<Guid>("CreationRequestId")
+                    b.Property<Guid?>("CreationRequestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Currency")
@@ -148,8 +279,8 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Source")
                         .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -173,7 +304,8 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OwnerId", "CreationRequestId")
                         .IsUnique()
-                        .HasDatabaseName("UX_FinancialTransactions_OwnerId_CreationRequestId");
+                        .HasDatabaseName("UX_FinancialTransactions_OwnerId_CreationRequestId")
+                        .HasFilter("[CreationRequestId] IS NOT NULL");
 
                     b.HasIndex("OwnerId", "TransactionDate", "Id")
                         .IsDescending(false, true, true)
@@ -185,11 +317,13 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_FinancialTransactions_Cancellation", "([Status] = N'Canceled' AND [CanceledAtUtc] IS NOT NULL) OR ([Status] = N'Active' AND [CanceledAtUtc] IS NULL)");
 
+                            t.HasCheckConstraint("CK_FinancialTransactions_CreationRequest", "([Source] = N'Manual' AND [CreationRequestId] IS NOT NULL AND [CreationFingerprint] IS NOT NULL) OR ([Source] = N'BillSettlement' AND [CreationRequestId] IS NULL AND [CreationFingerprint] IS NULL)");
+
                             t.HasCheckConstraint("CK_FinancialTransactions_Currency", "[Currency] = N'BRL'");
 
                             t.HasCheckConstraint("CK_FinancialTransactions_Kind", "[Kind] IN (N'Income', N'Expense')");
 
-                            t.HasCheckConstraint("CK_FinancialTransactions_Source", "[Source] = N'Manual'");
+                            t.HasCheckConstraint("CK_FinancialTransactions_Source", "[Source] IN (N'Manual', N'BillSettlement')");
 
                             t.HasCheckConstraint("CK_FinancialTransactions_Status", "[Status] IN (N'Active', N'Canceled')");
                         });
@@ -267,6 +401,41 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .HasFilter("[ProvisioningSlot] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.BillAudit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<Guid>("BillId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SettlementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "BillId");
+
+                    b.ToTable("BillAudits", (string)null);
                 });
 
             modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.FinancialAccountAudit", b =>
@@ -458,6 +627,16 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceManager.Application.Bills.BillSettlementRequest", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Bills.BillSettlement", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "SettlementId")
+                        .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Accounts.FinancialAccount", b =>
                 {
                     b.HasOne("FinanceManager.Infrastructure.Authentication.Owner", null)
@@ -476,11 +655,47 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Bills.Bill", b =>
+                {
+                    b.HasOne("FinanceManager.Infrastructure.Authentication.Owner", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Bills.BillSettlement", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Bills.Bill", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "BillId")
+                        .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FinanceManager.Domain.Transactions.FinancialTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "TransactionId")
+                        .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Transactions.FinancialTransaction", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Accounts.FinancialAccount", null)
                         .WithMany()
                         .HasForeignKey("OwnerId", "AccountId")
+                        .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.BillAudit", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Bills.Bill", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId", "BillId")
                         .HasPrincipalKey("OwnerId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

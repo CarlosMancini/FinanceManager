@@ -14,7 +14,7 @@ export interface TransactionDraft {
 export interface Transaction extends TransactionDraft {
   id: string;
   currency: 'BRL';
-  source: 'manual';
+  source: 'manual' | 'billSettlement';
   status: TransactionStatus;
 }
 export interface TransactionRevision { transaction: Transaction; version: string }

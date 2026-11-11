@@ -13,7 +13,7 @@ import { AuthService, sessionExpiredInterceptor } from './app/auth/auth.service'
       <header class="header">
         <h1>FinanceManager</h1>
         @if (auth.username()) {
-          <nav class="actions"><a routerLink="/transactions">Movimentações</a><a routerLink="/accounts">Contas</a><button type="button" (click)="logout()" [disabled]="busy()">Sair</button></nav>
+          <nav class="actions"><a routerLink="/transactions">Movimentações</a><a routerLink="/bills">Contas a pagar</a><a routerLink="/accounts">Contas</a><button type="button" (click)="logout()" [disabled]="busy()">Sair</button></nav>
         }
       </header>
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }

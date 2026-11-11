@@ -82,6 +82,7 @@ public sealed partial class TransactionsController(TransactionCommandService tra
         TransactionError.IdempotencyConflict => ApiProblems.Result(409, "IDEMPOTENCY_KEY_CONFLICT", "A chave de tentativa já foi usada com outros dados."),
         TransactionError.Canceled => ApiProblems.Result(409, "TRANSACTION_CANCELED", "A movimentação está cancelada e não pode ser alterada."),
         TransactionError.StaleVersion => ApiProblems.Result(412, "STALE_TRANSACTION_VERSION", "A movimentação mudou. Recarregue os dados antes de tentar novamente."),
+        TransactionError.Linked => ApiProblems.Result(409, "TRANSACTION_LINKED", "A movimentação possui uma baixa ativa. Reverta a baixa antes de alterá-la."),
         _ => throw new InvalidOperationException("Resultado de movimentação inválido.")
     };
 
@@ -110,5 +111,6 @@ internal sealed record TransactionResponse(Guid Id, Guid AccountId, string Kind,
     public static TransactionResponse From(FinancialTransaction value) => new(value.Id, value.AccountId,
         value.Kind.ToString().ToLowerInvariant(), value.Amount.ToString("0.00", CultureInfo.InvariantCulture),
         value.TransactionDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), value.Description, value.Currency,
-        value.Source.ToString().ToLowerInvariant(), value.Status.ToString().ToLowerInvariant());
+        value.Source == TransactionSource.BillSettlement ? "billSettlement" : "manual",
+        value.Status.ToString().ToLowerInvariant());
 }
