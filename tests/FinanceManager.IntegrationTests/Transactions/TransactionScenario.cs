@@ -36,6 +36,17 @@ internal sealed class TransactionScenario : IAsyncDisposable
         return await Client.SendAsync(request, token);
     }
 
+    public Task<HttpResponseMessage> CreateAsync(Guid key, object body, CancellationToken token)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/transactions")
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.Add("X-XSRF-TOKEN", Csrf);
+        request.Headers.Add("Idempotency-Key", key.ToString("D"));
+        return Client.SendAsync(request, token);
+    }
+
     public Task<HttpResponseMessage> PutAsync(string path, string etag, object body, CancellationToken token) =>
         AccountScenario.PutAsync(Client, path, body, etag, Csrf, token);
 

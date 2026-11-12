@@ -23,7 +23,7 @@ Registrar receitas e despesas realizadas e consultar o histórico por conta e pe
 
 ### US1 · Registrar e corrigir movimentações (P1)
 
-**Teste independente.** Registrar uma despesa, corrigir seu valor e cancelar o lançamento.
+**Teste independente.** Registrar uma despesa com todos os campos preenchidos e valor positivo, corrigir seu valor e cancelar o lançamento. Tentar registrar com cada campo vazio, valor zero e valor negativo.
 
 **Critérios.** MOV-01, MOV-03
 
@@ -43,12 +43,12 @@ Registrar receitas e despesas realizadas e consultar o histórico por conta e pe
 
 ### Critérios de aceitação
 
-- **MOV-01 · Registro.** O titular registra receita ou despesa com conta ativa, data civil até hoje, valor positivo em BRL e descrição. Valores inválidos, datas futuras e contas arquivadas são rejeitados. A data informada é preservada. Repetir o envio da mesma tentativa de registro deve resultar em uma única movimentação, inclusive quando o primeiro envio foi salvo antes de uma interrupção. Uma nova tentativa pode registrar outra movimentação com os mesmos dados.
+- **MOV-01 · Registro.** O titular registra receita ou despesa com conta ativa, data civil até hoje, valor estritamente maior que zero em BRL e descrição. Na tela **Nova movimentação**, conta, natureza, data, valor e descrição são obrigatórios; nenhum valor inicial pode dispensar a escolha ou confirmação dos dados exigidos para enviar. Campos ausentes, valor zero, valor negativo, valores inválidos, datas futuras e contas arquivadas são rejeitados, inclusive em solicitações fora da interface. A data informada é preservada. Repetir o envio da mesma tentativa de registro deve resultar em uma única movimentação, inclusive quando o primeiro envio foi salvo antes de uma interrupção. Uma nova tentativa pode registrar outra movimentação com os mesmos dados.
 - **MOV-02 · Histórico.** O titular consulta movimentações por conta, período inclusivo e natureza. Ao abrir o histórico, a lista e os totais usam o período do primeiro ao último dia do mês civil atual em America/Sao_Paulo, com ambos os dias incluídos. A lista apresenta registros do mais recente ao mais antigo, inclusive para contas arquivadas. A lista padrão inclui movimentações canceladas e as identifica com o status **Cancelada**.
 - **MOV-03 · Correção.** O titular altera ou cancela um lançamento manual sem baixa vinculada. O cancelamento preserva o histórico e retira o lançamento dos totais. Uma movimentação cancelada não pode ser editada ou conciliada. Quando houver vínculo com uma baixa, o titular deve desfazer a baixa antes de alterar ou cancelar a movimentação.
 - **MOV-04 · Totais.** Para o mesmo filtro, os totais refletem todas as movimentações ativas, inclusive quando a lista é paginada. O líquido é receitas menos despesas. O valor representa movimentação do período.
 - **MOV-05 · Entrada e disponibilidade.** Após login bem-sucedido, o titular entra no histórico de movimentações. Quando ainda não possui nenhuma conta cadastrada, entra diretamente na tela de cadastro de conta, com o formulário disponível para preenchimento. No histórico, **Nova movimentação** fica desabilitada quando não existe conta ativa. Se o titular acessar diretamente o formulário de nova movimentação sem possuir nenhuma conta cadastrada, é redirecionado para o cadastro de conta. Contas arquivadas continuam disponíveis apenas para consulta e não habilitam novos lançamentos.
-- **MOV-06 · Entrada monetária e registro consecutivo.** O campo **Valor em BRL** formata automaticamente a entrada como `R$ X,XX`, preserva centavos e não permite formato monetário inválido. Após cada registro concluído, a interface apresenta o diálogo **“Adicionar mais uma movimentação?”**, com opções **Sim** e **Não**. **Sim** permanece no formulário, limpa os campos editáveis, aplica os valores iniciais de um novo lançamento e gera uma nova tentativa independente. **Não** retorna ao histórico de movimentações. Fechar o diálogo equivale a **Não**.
+- **MOV-06 · Entrada monetária e registro consecutivo.** O campo **Valor em BRL** aceita apenas dígitos digitados ou colados, exibe automaticamente a máscara `R$ X,XX` enquanto o titular preenche e preserva centavos; letras, sinais, separadores digitados e valor não positivo não podem resultar em lançamento. O valor exibido corresponde ao valor registrado. Após cada registro concluído, a interface apresenta o diálogo **“Adicionar mais uma movimentação?”**, com opções **Sim** e **Não**. **Sim** permanece no formulário, limpa os campos editáveis, aplica os valores iniciais de um novo lançamento e gera uma nova tentativa independente. **Não** retorna ao histórico de movimentações. Fechar o diálogo equivale a **Não**.
 - **MOV-07 · Confirmações de alteração.** Antes de enviar uma correção, a interface apresenta um diálogo que identifica a ação e oferece **Confirmar** e **Voltar**. Antes de cancelar uma movimentação, apresenta confirmação equivalente deixando claro que o cancelamento é definitivo. **Voltar** ou fechar o diálogo mantém a movimentação e os dados do formulário sem alterações. Uma confirmação aceita usa a versão atualmente carregada e mantém o tratamento de concorrência definido em MOV-03.
 
 Transferências, lançamentos futuros, categorização e importação ficam para evolução.
@@ -63,6 +63,7 @@ Conta financeira e movimentação manual.
 - **SC-02.** Em 100% dos acessos após login sem contas cadastradas, o primeiro formulário financeiro exibido é o cadastro de conta, sem ação intermediária do titular.
 - **SC-03.** Em 100% dos caminhos da interface verificados sem conta ativa, nenhum lançamento pode ser iniciado ou enviado.
 - **SC-04.** O titular registra duas movimentações consecutivas usando um único acesso ao formulário de nova movimentação, e 100% das correções e cancelamentos exigem confirmação explícita antes do envio.
+- **SC-05.** Em 100% das tentativas verificadas de cadastro com um campo obrigatório vazio ou valor zero ou negativo, nenhuma movimentação é criada; em 100% das entradas monetárias verificadas, apenas dígitos são aceitos e o valor exibido em BRL coincide com o registrado.
 
 ## Suposições
 

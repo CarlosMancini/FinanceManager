@@ -49,6 +49,19 @@ describe('TransactionFormComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('does not create when any required field is missing or the amount is zero', async () => {
+    const { component, create } = await createComponent();
+    component.draft.description = '';
+    component.amountDisplay = 'R$ 12,34';
+    await component.save();
+    expect(create).not.toHaveBeenCalled();
+    component.draft.description = 'Teste';
+    component.amountDisplay = 'R$ 0,00';
+    await component.save();
+    expect(create).not.toHaveBeenCalled();
+    expect(component.error()).toBeTruthy();
+  });
+
   it('resets defaults and creates a fresh idempotency attempt after choosing yes', async () => {
     const { component, create } = await createComponent();
     component.amountDisplay = 'R$ 12,34';

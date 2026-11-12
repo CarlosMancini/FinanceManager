@@ -24,7 +24,7 @@
 
 ### Ciclo de vida
 
-- **Criação** · conta ativa do titular, natureza válida, valor positivo, data válida e descrição preenchida.
+- **Criação** · conta ativa do titular, natureza válida, valor estritamente positivo (`0.01` mínimo), data válida e descrição preenchida. Ausência de qualquer campo ou valor zero/negativo não cria movimentação; a natureza determina o sinal do total.
 - **Correção** · movimentação ativa, revisão atual e dados válidos. É permitido manter a conta original arquivada. Para trocar de conta, o destino precisa estar ativo e pertencer ao titular.
 - **Cancelamento** · movimentação ativa e revisão atual. O registro permanece no histórico e sai dos agregados. O cancelamento é definitivo e bloqueia edição e conciliação.
 - **Baixa vinculada** · na feature 003, uma baixa ativa bloqueia correção e cancelamento até sua reversão. O vínculo deve preservar a titularidade e participar da mesma verificação de concorrência.

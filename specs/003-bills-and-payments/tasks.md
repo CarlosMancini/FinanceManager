@@ -69,6 +69,26 @@ description: "Tarefas de implementação da feature 003-bills-and-payments"
 
 ## Dependências e ordem de execução
 
+### Adequação do cadastro de obrigação · 2026-11-11
+
+As tarefas T001–T026 documentam a entrega anterior e permanecem concluídas. As tarefas novas abaixo implementam PAG-01 revisado; o cadastro reutiliza a máscara entregue por 002/T039.
+
+#### Fase 6 · US1 · Validar e mascarar nova obrigação (P1)
+
+**Teste independente** · Descrição, valor ou vencimento ausente impede o cadastro; zero/negativo são rejeitados sem obrigação criada. Dígitos digitados ou colados aparecem como `R$ X,XX`, e `0.01` é aceito.
+
+- [ ] T027 [P] [US1] Acrescentar testes xUnit em `tests/FinanceManager.UnitTests/Bills/BillTests.cs` e `tests/FinanceManager.UnitTests/Bills/BillServiceTests.cs` para descrição vazia, valor `0`, negativo, mínimo `0.01` e vencimento obrigatório, identificando lacunas de PAG-01. Depende de T026.
+- [ ] T028 [P] [US1] Acrescentar testes HTTP em `tests/FinanceManager.IntegrationTests/Bills/BillContractTests.cs` para `POST /api/bills` sem cada campo (`description`, `amount`, `dueDate`), nulo/vazio quando aplicável, zero e negativo; exigir `400 VALIDATION_FAILED` sem obrigação criada. Depende de T026.
+- [ ] T029 [P] [US1] Criar testes de componente em `src/frontend/src/app/bills/bill-list.component.spec.ts` para três campos obrigatórios, bloqueio de valor vazio/zero, máscara `R$ X,XX`, entrada e colagem apenas numéricas e conversão exata; reutilizar os casos de `src/frontend/src/app/transactions/brl-currency.spec.ts`. Depende de 002/T039 e T026.
+- [ ] T030 [US1] Corrigir apenas as lacunas reveladas por T027–T028 em `src/backend/FinanceManager.Domain/Bills/Bill.cs`, `src/backend/FinanceManager.Application/Bills/BillService.cs` e `src/backend/FinanceManager.Api/Controllers/BillsController.cs`; manter `Amount` de `0.01` a `99999999999999999.99`, até duas casas, sem arredondar entrada inválida, e exigir descrição, valor e vencimento. Depende de T027 e T028.
+- [ ] T031 [US1] Atualizar `src/frontend/src/app/bills/bill-list.component.ts` para reutilizar `src/frontend/src/app/transactions/brl-currency.ts`, filtrar digitação e colagem a dígitos, exibir `R$ X,XX`, converter para decimal invariante e impedir envio sem descrição, valor e vencimento ou com valor zero. Depende de 002/T039, T029 e T030.
+
+#### Fase 7 · Verificação da adequação
+
+- [ ] T032 Executar testes xUnit, testes Angular, build e cenários de `specs/003-bills-and-payments/quickstart.md` pela interface e API; conferir PAG-01 e a regressão da 002, inclusive valor mínimo, campos obrigatórios e rejeição sem criação. Depende de T031 e 002/T040.
+
+**Ordem** · T027 e T028 podem avançar em paralelo; T029 usa a máscara concluída na 002 e pode avançar com os testes de backend. T030 segue os testes de backend, T031 integra a tela, e T032 fecha a adequação. A US1 revisada é o MVP desta correção.
+
 `002/T033 → Preparação (T001) → Fundação (T002–T006) → US1 (T007–T014) → US2 (T015–T025) → Validação (T026)`.
 
 Após T006, os testes da US2 podem usar registros semeados e avançar antes da integração da US1. Os serviços e o repositório da US2 aproveitam T010 e T011, e a integração visual depende de T014. A US1 pode ser entregue e validada sozinha.

@@ -46,4 +46,34 @@ public sealed class TransactionCommandContractTests
         { accountId = scenario.AccountId, kind = "expense", amount = "2.00", transactionDate = "2025-12-31", description = "x" }, token);
         await AuthTestClient.AssertProblemAsync(missingVersion, 428, "TRANSACTION_VERSION_REQUIRED", token);
     }
+
+    [Fact]
+    public async Task CreateRejectsMissingRequiredFieldsAndNonPositiveAmounts()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await TransactionScenario.StartAsync(token);
+        var valid = new Dictionary<string, object?>
+        {
+            ["accountId"] = scenario.AccountId,
+            ["kind"] = "expense",
+            ["amount"] = "1.00",
+            ["transactionDate"] = "2025-12-31",
+            ["description"] = "Compra",
+        };
+
+        foreach (var field in valid.Keys.ToArray())
+        {
+            var incomplete = new Dictionary<string, object?>(valid);
+            incomplete.Remove(field);
+            using var response = await scenario.CreateAsync(Guid.NewGuid(), incomplete, token);
+            await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
+        }
+
+        foreach (var amount in new[] { "0", "-1.00" })
+        {
+            var invalid = new Dictionary<string, object?>(valid) { ["amount"] = amount };
+            using var response = await scenario.CreateAsync(Guid.NewGuid(), invalid, token);
+            await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
+        }
+    }
 }
