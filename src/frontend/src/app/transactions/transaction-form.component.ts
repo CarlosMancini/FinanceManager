@@ -30,7 +30,7 @@ type PendingAction = 'edit' | 'cancel' | null;
             </select>
           </label>
           <label>Natureza
-            <select name="kind" [(ngModel)]="draft.kind" [disabled]="busy() || canceled()">
+            <select name="kind" [(ngModel)]="draft.kind" required [disabled]="busy() || canceled()">
               <option value="expense">Despesa</option><option value="income">Receita</option>
             </select>
           </label>
@@ -121,6 +121,14 @@ export class TransactionFormComponent implements OnInit {
 
   async save(): Promise<void> {
     if (this.busy() || this.stale() || this.canceled()) return;
+    if (!this.draft.accountId || !this.draft.kind || !this.draft.transactionDate || !this.draft.description.trim()) {
+      this.error.set('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (!invariantFromBrlInput(this.amountDisplay)) {
+      this.error.set('Informe um valor maior que zero.');
+      return;
+    }
     if (this.revision()) {
       this.pendingAction.set('edit');
       this.actionDialog?.present();

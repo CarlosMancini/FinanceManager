@@ -34,6 +34,9 @@ internal sealed class BillScenario : IAsyncDisposable
     public Task<HttpResponseMessage> CreateAsync(string description, string amount, string dueDate, CancellationToken token) =>
         AuthTestClient.PostAsync(Client, "/api/bills", Csrf, new { description, amount, dueDate }, token);
 
+    public Task<HttpResponseMessage> CreateAsync(object body, CancellationToken token) =>
+        AuthTestClient.PostAsync(Client, "/api/bills", Csrf, body, token);
+
     public async Task<HttpResponseMessage> PutAsync(string path, object body, string? etag, CancellationToken token)
     {
         using var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent.Create(body) };

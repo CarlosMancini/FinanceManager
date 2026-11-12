@@ -38,4 +38,32 @@ public sealed class BillContractTests
         using var noCsrf = await scenario.Client.PostAsJsonAsync("/api/bills", new { description = "X", amount = "1.00", dueDate = "2026-11-10" }, token);
         await AuthTestClient.AssertProblemAsync(noCsrf, 403, "INVALID_CSRF_TOKEN", token);
     }
+
+    [Fact]
+    public async Task CreateRejectsMissingFieldsAndNonPositiveAmounts()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await BillScenario.StartAsync(token);
+        var valid = new Dictionary<string, object?>
+        {
+            ["description"] = "Conta",
+            ["amount"] = "1.00",
+            ["dueDate"] = "2026-11-10",
+        };
+
+        foreach (var field in valid.Keys.ToArray())
+        {
+            var incomplete = new Dictionary<string, object?>(valid);
+            incomplete.Remove(field);
+            using var response = await scenario.CreateAsync(incomplete, token);
+            await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
+        }
+
+        foreach (var amount in new[] { "0", "-1.00" })
+        {
+            var invalid = new Dictionary<string, object?>(valid) { ["amount"] = amount };
+            using var response = await scenario.CreateAsync(invalid, token);
+            await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
+        }
+    }
 }

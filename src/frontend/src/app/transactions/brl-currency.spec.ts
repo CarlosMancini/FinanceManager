@@ -10,6 +10,7 @@ describe('BRL currency input', () => {
     ['123456', 'R$ 1.234,56'],
     ['R$ 1.234,56', 'R$ 1.234,56'],
     ['abc123456', 'R$ 1.234,56'],
+    ['R$ -1a2.3,4x', 'R$ 12,34'],
   ])('formats %s as %s', (input, expected) => {
     expect(formatBrlInput(input)).toBe(expected);
   });
@@ -23,6 +24,11 @@ describe('BRL currency input', () => {
     expect(invariantFromBrlInput('R$ 0,00')).toBeNull();
     expect(invariantFromBrlInput('texto')).toBeNull();
     expect(formatBrlInput('99999999999999999999')).toBeNull();
+  });
+
+  it('keeps only digits from typed or pasted input', () => {
+    expect(formatBrlInput('a1b2c3')).toBe('R$ 1,23');
+    expect(formatBrlInput('R$ -1.234,56')).toBe('R$ 1.234,56');
   });
 
   it('accepts the exact maximum and supports removal back to an empty value', () => {

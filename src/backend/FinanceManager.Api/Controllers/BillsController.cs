@@ -108,9 +108,12 @@ public sealed partial class BillsController(BillService bills, TimeProvider cloc
     private static bool TryDraft(BillRequest request, out BillDraft draft)
     {
         draft = default!;
-        if (!AmountPattern().IsMatch(request.Amount) || !decimal.TryParse(request.Amount, NumberStyles.AllowDecimalPoint,
+        if (request is null || string.IsNullOrWhiteSpace(request.Description) || string.IsNullOrWhiteSpace(request.Amount) ||
+            string.IsNullOrWhiteSpace(request.DueDate) || !AmountPattern().IsMatch(request.Amount) ||
+            !decimal.TryParse(request.Amount, NumberStyles.AllowDecimalPoint,
             CultureInfo.InvariantCulture, out var amount) || !DateOnly.TryParseExact(request.DueDate, "yyyy-MM-dd",
             CultureInfo.InvariantCulture, DateTimeStyles.None, out var dueDate)) return false;
+        if (amount <= 0m) return false;
         draft = new(request.Description, amount, dueDate);
         return true;
     }
@@ -142,5 +145,5 @@ public sealed partial class BillsController(BillService bills, TimeProvider cloc
     private static partial Regex AmountPattern();
 }
 
-public sealed record BillRequest(string Description, string Amount, string DueDate);
+public sealed record BillRequest(string? Description, string? Amount, string? DueDate);
 public sealed record BillStatusRequest(string Status);

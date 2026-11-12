@@ -89,9 +89,13 @@ public sealed partial class TransactionsController(TransactionCommandService tra
     internal static bool TryDraft(TransactionRequest request, out TransactionDraft draft)
     {
         draft = default!;
+        if (request is null || request.AccountId == Guid.Empty || string.IsNullOrWhiteSpace(request.Kind) ||
+            string.IsNullOrWhiteSpace(request.Amount) || string.IsNullOrWhiteSpace(request.TransactionDate) ||
+            string.IsNullOrWhiteSpace(request.Description)) return false;
         var kind = request.Kind switch { "income" => TransactionKind.Income, "expense" => TransactionKind.Expense, _ => (TransactionKind?)null };
         if (kind is null || !AmountPattern().IsMatch(request.Amount) ||
             !decimal.TryParse(request.Amount, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var amount) ||
+            amount <= 0m ||
             !DateOnly.TryParseExact(request.TransactionDate, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out var date)) return false;
         draft = new(request.AccountId, kind.Value, amount, date, request.Description);
@@ -102,7 +106,7 @@ public sealed partial class TransactionsController(TransactionCommandService tra
     private static partial Regex AmountPattern();
 }
 
-public sealed record TransactionRequest(Guid AccountId, string Kind, string Amount, string TransactionDate, string Description);
+public sealed record TransactionRequest(Guid AccountId, string? Kind, string? Amount, string? TransactionDate, string? Description);
 public sealed record TransactionStatusRequest(string Status);
 
 internal sealed record TransactionResponse(Guid Id, Guid AccountId, string Kind, string Amount, string TransactionDate,

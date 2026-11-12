@@ -32,3 +32,4 @@
 ## Notes
 
 - Atualização de 2026-11-10 incorpora onboarding sem contas, disponibilidade por conta ativa, máscara monetária, registro consecutivo e confirmações de correção e cancelamento.
+- Revisão de 2026-11-11: preenchimento obrigatório, entrada monetária somente com dígitos e rejeição de valores zero e negativos têm cenários e resultados mensuráveis em MOV-01, MOV-06 e SC-05. Todos os itens permanecem atendidos.

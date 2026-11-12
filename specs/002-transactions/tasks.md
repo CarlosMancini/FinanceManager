@@ -88,6 +88,32 @@ description: "Tarefas de implementação da feature 002-transactions"
 
 ## Dependências e ordem de execução
 
+### Adequação de entrada monetária e obrigatoriedade · 2026-11-11
+
+As tarefas T001–T033 documentam a entrega anterior e permanecem concluídas. As tarefas novas abaixo implementam MOV-01 e MOV-06 revisados, após a fundação existente.
+
+#### Fase 7 · US1 · Validar cadastro manual (P1)
+
+**Teste independente** · Cada um de `accountId`, `kind`, `amount`, `transactionDate` e `description` ausente ou vazio, e valor zero/negativo, recebe rejeição sem movimentação criada. `0.01` continua aceito.
+
+- [X] T034 [P] [US1] Acrescentar testes xUnit em `tests/FinanceManager.UnitTests/Transactions/FinancialTransactionTests.cs` e `tests/FinanceManager.UnitTests/Transactions/TransactionCommandServiceTests.cs` para valor `0`, negativo, mínimo `0.01`, descrição vazia e dados obrigatórios; confirmar que detectam qualquer lacuna em MOV-01. Depende de T033. MOV-01.
+- [X] T035 [P] [US1] Acrescentar testes HTTP em `tests/FinanceManager.IntegrationTests/Transactions/TransactionCommandContractTests.cs` para `POST /api/transactions` sem cada campo (`accountId`, `kind`, `amount`, `transactionDate`, `description`), nulo/vazio quando aplicável, valor zero e negativo; exigir `400 VALIDATION_FAILED` e ausência de criação. Depende de T033. MOV-01.
+- [X] T036 [US1] Corrigir apenas as lacunas reveladas por T034–T035 em `src/backend/FinanceManager.Domain/Transactions/FinancialTransaction.cs`, `src/backend/FinanceManager.Application/Transactions/TransactionCommandService.cs` e `src/backend/FinanceManager.Api/Controllers/TransactionsController.cs`, mantendo `Amount` entre `0.01` e `99999999999999999.99`, até duas casas, sem arredondar entrada inválida e com os cinco campos obrigatórios. Depende de T034 e T035. MOV-01.
+
+#### Fase 8 · US3 · Exigir e mascarar entrada na tela (P1)
+
+**Teste independente** · A tela não envia cadastro com qualquer campo obrigatório vazio ou `R$ 0,00`; digitação/colagem de letras, sinais e separadores deixa apenas dígitos na máscara, e centavos são preservados no registro.
+
+- [X] T037 [P] [US3] Acrescentar testes em `src/frontend/src/app/transactions/brl-currency.spec.ts` para digitação e colagem com letras, sinais, separadores e zero, conferindo exibição `R$ X,XX`, centavos e conversão decimal invariante sem `Number`. Depende de T033. MOV-06.
+- [X] T038 [P] [US3] Acrescentar testes em `src/frontend/src/app/transactions/transaction-form.component.spec.ts` para conta, natureza, data, valor e descrição obrigatórios, bloqueio de valor vazio/zero e nenhuma chamada de cadastro quando inválido. Depende de T033. MOV-01, MOV-06.
+- [X] T039 [US3] Ajustar `src/frontend/src/app/transactions/brl-currency.ts` e `src/frontend/src/app/transactions/transaction-form.component.ts` para filtrar entrada e colagem a dígitos, exibir `R$ X,XX`, converter exatamente para decimal invariante e impedir envio sem os cinco campos ou com valor não positivo. Preservar o fluxo de registro consecutivo. Depende de T036–T038. MOV-01, MOV-06.
+
+#### Fase 9 · Verificação da adequação
+
+- [ ] T040 Executar testes xUnit, testes Angular, build e cenários de `specs/002-transactions/quickstart.md` pela interface e API; conferir MOV-01, MOV-06 e SC-05 e revisar o diff da 002. Depende de T039.
+
+**Ordem** · T034 e T035 podem avançar em paralelo; T037 e T038 também, em arquivos distintos. T036 segue os testes de backend, T039 integra a interface, e T040 fecha a adequação. A US1 revisada é o MVP; a US3 conclui a experiência de entrada.
+
 `Preparação (T001) → Fundação (T002–T005) → US1 (T006–T014) → US2 (T015–T022) → US3 (T023–T032) → Validação (T033)`.
 
 - A fundação 001 fornece as contas, a sessão e a infraestrutura de execução. Depois de T005, as histórias podem iniciar seus testes e componentes independentes.

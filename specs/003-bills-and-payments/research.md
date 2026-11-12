@@ -8,6 +8,14 @@
 
 **Alternativas avaliadas.** Um segundo registro para representar o realizado duplicaria regras e poderia contar uma saída duas vezes. Uma integração bancária não faz parte deste escopo.
 
+## Entrada monetária e campos obrigatórios
+
+**Decisão.** Reutilizar a conversão exata de dígitos para `R$ X,XX` e para string decimal invariante da 002 no cadastro de obrigação. Exigir descrição, valor e vencimento antes de enviar; rejeitar valor vazio, zero ou negativo também no servidor. O domínio e a restrição persistida continuam exigindo valor estritamente positivo.
+
+**Motivo.** Os dois formulários apresentam o mesmo padrão BRL e as validações do servidor permanecem eficazes para solicitações diretas.
+
+**Alternativas avaliadas.** Uma segunda máscara independente poderia divergir da 002. Validar apenas na interface deixaria a entrada externa sem a mesma garantia.
+
 ## Estados, consulta e escolha de despesa
 
 **Decisão.** Derivar a situação a partir do cancelamento, da baixa ativa e do vencimento comparado ao dia civil de São Paulo. Consultar todas as obrigações em aberto por padrão e aplicar o período apenas quando informado. Ordenar por vencimento e ID. Calcular página, contagem e soma no mesmo filtro e numa transação curta `SERIALIZABLE`, incluindo apenas obrigações em aberto na soma. Usar a precisão do agregado SQL e serializá-lo em formato decimal invariante. Oferecer uma lista paginada de despesas elegíveis para a obrigação, incluindo as de contas arquivadas.

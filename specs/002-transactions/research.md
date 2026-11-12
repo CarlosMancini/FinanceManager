@@ -58,7 +58,7 @@
 
 ## Entrada monetária em BRL
 
-**Decisão.** Manter no formulário uma string visual `R$ X,XX` construída a partir de dígitos e converter deterministicamente para a string decimal invariante antes do envio. Não converter o valor para `Number`. A validação final continua no servidor.
+**Decisão.** Manter no formulário uma string visual `R$ X,XX` construída exclusivamente a partir de dígitos digitados ou colados e converter deterministicamente para a string decimal invariante antes do envio. Não converter o valor para `Number`. Bloquear envio com qualquer campo obrigatório ausente ou valor zero. A validação final de presença e valor positivo continua no servidor, inclusive para chamadas fora da interface.
 
 **Motivo.** A abordagem preserva centavos e o contrato de precisão, permite edição previsível e mantém apresentação brasileira separada do transporte invariante.
 

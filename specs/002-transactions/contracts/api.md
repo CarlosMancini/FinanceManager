@@ -14,11 +14,13 @@ API JSON na mesma origem HTTPS da SPA. Reutiliza [sessão, CSRF e erros da funda
 
 Cadastro e edição recebem `accountId`, `kind` (`income` ou `expense`), `amount` como string decimal invariante positiva (sem separador de milhares, expoente ou mais de duas casas), `transactionDate` em `YYYY-MM-DD` e `description`. O recurso devolve esses campos mais `id`, `currency` (`BRL`), `source` (`manual`) e `status` (`active` ou `canceled`). Valores devolvidos têm duas casas. Limites e transições seguem o [modelo de dados](../data-model.md).
 
+No `POST`, todos os cinco campos do corpo são obrigatórios e `amount` deve representar valor estritamente maior que zero. Campo ausente, nulo, vazio, valor `0`, negativo ou formato inválido recebe `400 VALIDATION_FAILED`, sem criar movimentação. O mesmo critério monetário vale para a edição.
+
 No cadastro, a SPA mantém chave e corpo da tentativa em memória para reenvio após resultado incerto. Uma nova tentativa intencional usa nova chave. Em edição ou cancelamento, usa uma única ETag forte do detalhe, com aspas, em `If-Match`. ETag fraca, curinga, múltiplas tags ou valor malformado recebem erro. Após `412`, a SPA pede para recarregar o detalhe antes de uma nova tentativa.
 
 ## Contrato da interface
 
-- O campo visual de valor usa `R$ X,XX`; antes do envio, a SPA produz `amount` como string decimal invariante com duas casas. A API não recebe símbolo de moeda nem separador de milhares.
+- O campo visual de valor aceita apenas dígitos digitados ou colados e usa `R$ X,XX`; antes do envio, a SPA produz `amount` como string decimal invariante com duas casas. A API não recebe símbolo de moeda nem separador de milhares. Conta, natureza, data, valor e descrição precisam estar preenchidos, e valor zero não habilita o envio.
 - O diálogo **“Adicionar mais uma movimentação?”** é apresentado somente após `201` ou reenvio equivalente confirmado. **Sim** cria uma nova chave e um novo corpo; **Não** ou fechamento retorna ao histórico.
 - Confirmações de correção e cancelamento acontecem antes dos respectivos `PUT`. Recusar ou fechar não envia requisição. Aceitar envia a ETag atualmente carregada e preserva o tratamento de `412`.
 - A disponibilidade e os redirecionamentos usam `GET /api/accounts`: zero contas abre o cadastro; ausência de conta ativa desabilita a ação de nova movimentação.

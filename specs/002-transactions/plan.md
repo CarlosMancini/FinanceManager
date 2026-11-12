@@ -14,7 +14,7 @@ Registrar, corrigir e cancelar receitas e despesas manuais e consultar o histór
 | Persistência | SQL Server 2025 Express LocalDB no Windows, via EF Core. Acrescentar migração versionada e validá-la em banco novo e em banco com a fundação aplicada. |
 | Testes | xUnit v3 com Microsoft Testing Platform, relógio controlado, testes HTTP com `WebApplicationFactory` e integração em SQL Server separado. Acrescentar o builder `@angular/build:unit-test` com Vitest 4.0.8 fixado para guards, máscara monetária e componentes; validar também a interface Angular pelo fluxo local. |
 | Plataforma e escopo | Aplicação web responsiva, um titular em loopback HTTPS, movimentações manuais em BRL. A feature 001 fornece sessão, contas e infraestrutura. |
-| Navegação e formulários | Guards autenticados consultam as contas antes de liberar histórico e cadastro. O histórico abre após login quando existe ao menos uma conta; sem contas, a navegação abre o cadastro. O formulário monetário mantém uma representação textual em BRL separada da string decimal invariante enviada à API. Diálogos modais acessíveis confirmam continuação, correção e cancelamento. |
+| Navegação e formulários | Guards autenticados consultam as contas antes de liberar histórico e cadastro. O histórico abre após login quando existe ao menos uma conta; sem contas, a navegação abre o cadastro. Conta, natureza, data, valor e descrição são obrigatórios na criação. O formulário monetário mantém uma representação textual em BRL separada da string decimal invariante enviada à API. Diálogos modais acessíveis confirmam continuação, correção e cancelamento. |
 | Desempenho e diagnóstico | Paginar no banco com até 100 itens por resposta e agregar sobre o filtro completo em SQL. Verificar o plano de execução com histórico sintético e confirmar que a aplicação não materializa todos os lançamentos. Reutilizar o tratamento de falhas da fundação e registrar auditoria mínima UTC nas mutações. |
 
 ## Verificação da constituição
@@ -23,7 +23,7 @@ Registrar, corrigir e cancelar receitas e despesas manuais e consultar o histór
 |---|---|
 | I · Especificação | A matriz abaixo relaciona MOV-01 a MOV-07 aos testes. A feature 003 completa a proteção de baixas de MOV-03. |
 | II · DDD, MVC e persistência | Angular apresenta os dados. Controllers delegam aos serviços de aplicação. O domínio valida os invariantes e a infraestrutura executa consultas e gravações SQL. |
-| III · Integridade financeira | Valores decimais, data civil e relógio injetado, auditoria UTC, transações atômicas e revisão condicional. A chave de tentativa tem unicidade por titular. |
+| III · Integridade financeira | Máscara BRL com entrada apenas de dígitos e conversão decimal exata; rejeição de valor ausente, zero ou negativo na interface e no servidor. Data civil e relógio injetado, auditoria UTC, transações atômicas e revisão condicional. A chave de tentativa tem unicidade por titular. |
 | IV · Segurança e privacidade | Sessão, antiforgery, HTTPS local e titularidade reaproveitados da fundação. Consultas e referências filtradas pelo titular, sem dados financeiros nos logs. |
 | V · Integrações | Origem manual explícita. Importação e integrações bancárias ficam fora da feature. |
 | VI · Testes | Casos de uso e regras no xUnit. Corridas, migração, restrições e valores em SQL Server. Verificação da interface e do contrato HTTP. |
@@ -48,19 +48,19 @@ Verificação concluída antes da pesquisa e repetida após o desenho. Os artefa
 3. Implementar consulta por titular, conta, natureza e datas inclusivas, ordenada por data e ID decrescentes. Aplicar os filtros uma vez e devolver página, contagem e totais em uma resposta consistente.
 4. Integrar os fluxos no Angular e executar a [validação local](quickstart.md). A feature 003 deverá testar vínculo ativo e versão na mesma operação e avançar a versão da movimentação em cada baixa ou reversão. Essa proteção de MOV-03 depende do vínculo entregue pela 003.
 5. Centralizar a decisão de navegação em guards que reutilizam `AccountsApiService`: a rota inicial consulta contas; zero contas redireciona ao cadastro, enquanto o histórico permanece inicial para titulares com contas. A rota de nova movimentação exige uma conta ativa e a ação do histórico reflete a mesma condição.
-6. Manter o valor digitado como texto monetário. A apresentação aceita dígitos e produz `R$ X,XX`; o cliente remove símbolos e separadores visuais para enviar a string decimal invariante já aceita pelo contrato, sem usar ponto flutuante.
+6. Manter o valor digitado como texto monetário. Uma função compartilhável filtra entrada e colagem para dígitos, produz `R$ X,XX` e converte centavos para string decimal invariante sem ponto flutuante. Não enviar o formulário de nova movimentação enquanto conta, natureza, data, valor ou descrição estiver ausente, ou o valor for zero. Preservar a validação de valor positivo no domínio e no contrato HTTP para chamadas externas.
 7. Após `POST` confirmado, abrir um diálogo de continuação. **Sim** descarta o estado concluído, cria nova chave de idempotência e restaura os padrões do formulário; **Não** ou fechamento navega ao histórico. Antes de `PUT` de correção ou cancelamento, abrir confirmação e só enviar após aceite. Os diálogos preservam foco, permitem teclado e devolvem foco ao acionador quando não prosseguem.
 
 ## Matriz de verificação
 
 | Critério | Verificação |
 |---|---|
-| MOV-01 | xUnit para valor, descrição, natureza, data e conta. SQL e HTTP para reenvio após resposta perdida, reenvios concorrentes, chave com conteúdo divergente, dados iguais com nova chave, conta arquivada durante gravação e rollback da auditoria. |
+| MOV-01 | xUnit e HTTP para cada campo ausente, valor zero, negativo ou inválido, sem criação de movimentação; testar também valor mínimo positivo. SQL e HTTP para reenvio após resposta perdida, reenvios concorrentes, chave com conteúdo divergente, dados iguais com nova chave, conta arquivada durante gravação e rollback da auditoria. |
 | MOV-02 | xUnit para limites civis, virada do mês em São Paulo e validação de filtros. SQL e HTTP para ordenação em empate, paginação, titularidade e histórico de contas arquivadas. Navegador para mês inicial, estado vazio e status **Cancelada**. |
 | MOV-03 | xUnit para estados e troca de conta. SQL e HTTP para auditoria, edição ou cancelamento concorrente e versão desatualizada. Cenários com baixa vinculada ficam na feature 003. |
 | MOV-04 | SQL e HTTP para totais com filtros e páginas, zero quando vazio ou só cancelado, líquido negativo, centavos e agregados acima do limite individual. Exercitar leitura concorrente e conferir lista e totais no navegador. |
 | MOV-05 | Testes de navegação para login com zero contas e com conta existente, estado desabilitado sem conta ativa e acesso direto ao formulário sem conta. Navegador para foco no cadastro e ausência de caminho que envie lançamento sem conta ativa. |
-| MOV-06 | Testes da transformação textual entre BRL e decimal invariante, incluindo zero, centavos, colagem, remoção de dígitos e limite máximo. Navegador para **Sim**, **Não** e fechamento do diálogo, verificando nova chave por tentativa e dois cadastros consecutivos. |
+| MOV-06 | Testes da transformação textual entre dígitos, `R$ X,XX` e decimal invariante, incluindo entrada digitada, colagem de letras/sinais/separadores, zero, centavos, remoção de dígitos e limite máximo. Navegador para bloqueio de campos obrigatórios, **Sim**, **Não** e fechamento do diálogo, verificando nova chave por tentativa e dois cadastros consecutivos. |
 | MOV-07 | Testes de componente para impedir chamadas antes da confirmação e preservar estado ao voltar ou fechar. Navegador e API para correção confirmada, cancelamento confirmado, versão obsoleta e cancelamento definitivo. |
 
 ## Artefatos de desenho

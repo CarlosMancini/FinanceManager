@@ -13,6 +13,8 @@
 
 A obrigação referencia `Owner` por `OwnerId`, com exclusão restrita. A obrigação começa em aberto. Quando existe baixa ativa, fica paga. O cancelamento só é permitido em aberto e preserva a obrigação no histórico. Sem cancelamento ou baixa ativa, classificar a data como a vencer, vence hoje ou vencida em relação ao dia civil de America/Sao_Paulo. Calcular o dia uma vez por operação com o relógio injetado. A reversão restaura o cálculo pela data. Indexar `(OwnerId, DueDate, Id)` para a consulta. Aplicar restrição SQL para `CanceledAtUtc` nulo em obrigação ativa e preenchido em obrigação cancelada.
 
+No cadastro, descrição, valor e vencimento são obrigatórios. A ausência de qualquer campo ou valor zero/negativo não cria obrigação. O limite monetário mínimo é `0.01`, e a validação de entrada não arredonda um valor inválido para torná-lo aceitável.
+
 ## BillSettlement
 
 | Campo | Tipo e regra |

@@ -23,7 +23,7 @@ Acompanhar obrigações em aberto e seus vencimentos, baixar pelo valor integral
 |---|---|
 | I · Especificação | A matriz liga PAG-01 a PAG-05 e MOV-03 a verificações observáveis. |
 | II · DDD, MVC e persistência | Angular apresenta os dados. Controllers delegam aos serviços de aplicação. O domínio aplica invariantes, e a infraestrutura implementa consultas, transações e migrações. |
-| III · Integridade | BRL decimal, calendário civil injetável, auditoria UTC, baixa e reversão atômicas e recibo idempotente. A saída realizada permanece em uma única movimentação. |
+| III · Integridade | Entrada monetária apenas com dígitos e máscara BRL compartilhada com a 002; rejeição de valor ausente, zero ou negativo na interface e no servidor. Calendário civil injetável, auditoria UTC, baixa e reversão atômicas e recibo idempotente. |
 | IV · Segurança e privacidade | Reutilizar sessão e CSRF da fundação. Escopar dados por titular, usar HTTPS local e manter dados financeiros fora dos logs. |
 | V · Integrações | Movimentações preservam origem manual ou de baixa. A feature usa somente fontes internas. |
 | VI · Testes | xUnit cobre regras e casos de uso. SQL Server verifica migração, precisão, concorrência e rollback. A validação também passa pela API e pela interface. |
@@ -48,14 +48,14 @@ Os artefatos da feature ficam ao lado da especificação. O código segue as cam
 1. Modelar obrigação, vínculo e recibo conforme o [modelo de dados](data-model.md). Acrescentar a migração com referências por titular, índices de baixa ativa e origem de movimentação gerada, preservando registros da 002.
 2. Implementar cadastro, edição, cancelamento e consulta. Calcular as situações com a mesma data civil em toda a operação. Devolver página, contagem e total coerentes com o filtro.
 3. Executar a baixa em uma transação com a despesa nova, quando aplicável, a auditoria e o recibo. A reversão opera pelo ID da baixa e cancela somente a despesa que ela criou. Usar versões e restrições para proteger a concorrência com as mutações de obrigações e de movimentações.
-4. Expor o [contrato HTTP](contracts/api.md). Na interface, manter o total associado aos filtros, apresentar estados de carregamento, vazio e erro, e permitir selecionar despesas elegíveis de contas arquivadas. Ao criar despesa, mostrar o valor e a descrição copiados e oferecer apenas contas ativas. Antes de reverter, informar o efeito sobre a despesa.
+4. Expor o [contrato HTTP](contracts/api.md). No cadastro de obrigação, exigir descrição, valor e vencimento; reutilizar a conversão exata da máscara monetária da 002 e bloquear valor vazio ou zero. Manter a validação de valor positivo no domínio e na API. Na interface, manter o total associado aos filtros, apresentar estados de carregamento, vazio e erro, e permitir selecionar despesas elegíveis de contas arquivadas. Ao criar despesa, mostrar o valor e a descrição copiados e oferecer apenas contas ativas. Antes de reverter, informar o efeito sobre a despesa.
 5. Aplicar e validar as migrações e executar o [roteiro local](quickstart.md).
 
 ## Matriz de verificação
 
 | Critério | Verificação |
 |---|---|
-| PAG-01 | xUnit para descrição, valor, cancelamento e estado. HTTP e navegador para cadastro, edição, histórico e rejeição de revisão antiga. |
+| PAG-01 | xUnit e HTTP para cada campo ausente, valor zero, negativo ou inválido, sem criação de obrigação; testar também valor mínimo positivo. Testes da máscara BRL compartilhada para digitação e colagem. Navegador para cadastro, bloqueio de campos obrigatórios, edição, histórico e rejeição de revisão antiga. |
 | PAG-02 | xUnit para dia civil, virada do dia e filtros. SQL e HTTP para vencidas de meses anteriores, limites inclusivos, paginação, precisão do total, resultado vazio e leitura durante baixa concorrente. |
 | PAG-03 | xUnit para valor idêntico, conta, data, origem e descrição copiada. SQL e HTTP para vínculo em conta arquivada, criação em conta ativa, recibo após resposta perdida e reversão, chave divergente e concorrência. |
 | PAG-04 | xUnit, SQL e interface para ambas as origens da despesa, totais e tentativa repetida de reversão após nova baixa. |

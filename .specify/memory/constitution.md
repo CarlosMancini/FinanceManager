@@ -1,3 +1,12 @@
+<!--
+Sync Impact Report
+- Version: 1.2.0 → 1.3.0
+- Modified principle: III. Integridade financeira (regra global de entrada monetária)
+- Added sections: nenhuma
+- Removed sections: nenhuma
+- Follow-up: adequar os artefatos e formulários das features 002 e 003.
+- TODO preexistente: confirmar data original de ratificação.
+-->
 # FinanceManager Constitution
 
 Escopo inicial pessoal e local.
@@ -36,6 +45,7 @@ impedem que detalhes de transporte ou persistência determinem o comportamento d
 ### III. Integridade financeira
 
 - MVP em BRL. Usar decimal no domínio e decimal(19,2) para valores monetários persistidos. Valores informados devem ser positivos, ter até duas casas e caber no tipo persistido. A natureza da operação define o sinal. Na API, transportar valores como strings decimais invariantes. Calcular com precisão decimal e arredondar resultados monetários no ponto definido pela regra, com empate afastado de zero como padrão.
+- Todos os campos de entrada de valor monetário na interface DEVEM aceitar apenas dígitos e exibir uma máscara BRL no formato `R$ X,XX`. A apresentação DEVE converter a entrada para o valor decimal antes do envio à API. A interface e o servidor DEVEM rejeitar valor zero, negativo, ausente ou inválido; o sinal da movimentação decorre exclusivamente da natureza da operação.
 - Usar data civil para vencimentos e datas de movimentação. Avaliar o dia corrente em America/Sao_Paulo a partir de relógio injetável. Registrar instantes de auditoria em UTC.
 - Distinguir obrigação, movimentação realizada e vínculo de baixa. A baixa integral exclui a obrigação da projeção e mantém uma única saída no realizado. Alterações, retries e concorrência devem preservar esse vínculo e a consistência dos totais.
 - Toda alteração de estado financeiro composta deve ser atômica. Rastrear a origem dos dados e registrar alterações sensíveis com identificadores e metadados mínimos.
@@ -104,4 +114,4 @@ ampliações materiais das regras; PATCH para esclarecimentos e correções sem 
 de obrigação. A revisão de conformidade DEVE identificar artefatos divergentes para
 correção, sem modificar templates ou planos durante o fluxo de atualização constitucional.
 
-**Version**: 1.2.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-09
+**Version**: 1.3.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-11

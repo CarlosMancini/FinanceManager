@@ -14,6 +14,8 @@ API JSON de mesma origem. Reutilizar [sessão, HTTPS, CSRF e formato de erros da
 
 Valores monetários são strings decimais invariantes. Na entrada, rejeitar expoente, separador de milhares, valor não positivo e mais de duas casas. Valores de resposta têm duas casas. Datas civis usam `YYYY-MM-DD`. Itens e detalhe contêm `id`, campos do cadastro, `currency` (`BRL`) e `status`, cujo valor é `upcoming`, `dueToday`, `overdue`, `paid` ou `canceled`; `open` e `all` são apenas valores de filtro. O detalhe também contém `activeSettlement`, nulo em ausência de baixa ou com o recibo da baixa ativa.
 
+No `POST`, `description`, `amount` e `dueDate` são obrigatórios. Campo ausente, nulo, vazio, valor `0`, negativo ou formato inválido recebe `400 VALIDATION_FAILED`, sem criar obrigação. O mesmo critério monetário vale para a edição. Na interface, o valor aceita apenas dígitos digitados ou colados, aparece como `R$ X,XX` e é convertido para string decimal invariante antes do envio; os três campos precisam estar preenchidos e valor zero bloqueia o envio.
+
 A ETag forte do detalhe inclui a revisão persistida e a situação derivada. Uma mudança de situação à meia-noite invalida uma ETag anterior. Mutações da obrigação aceitam uma única tag forte, entre aspas, em `If-Match`. Após conflito de versão, a interface orienta a recarregar o detalhe ou a selecionar novamente a despesa.
 
 ### Filtros e total
