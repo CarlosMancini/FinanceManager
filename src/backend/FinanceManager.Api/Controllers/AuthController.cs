@@ -14,8 +14,31 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/auth")]
-public sealed class AuthController(OwnerAccessService access, IAntiforgery antiforgery) : ControllerBase
+public sealed class AuthController(OwnerAccessService access, OwnerRegistrationService registration, IAntiforgery antiforgery) : ControllerBase
 {
+    [AllowAnonymous]
+    [HttpGet("registration-state")]
+    public async Task<IActionResult> RegistrationState(CancellationToken cancellationToken)
+    {
+        var state = await registration.GetStateAsync(cancellationToken);
+        return Ok(new { state = state switch { Application.Authentication.RegistrationState.Empty => "empty", Application.Authentication.RegistrationState.LegacyPending => "legacyPending", _ => "completed" } });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegistrationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await registration.RegisterAsync(request.FullName, request.Nickname, request.BirthDate, request.Email, request.PhoneNumber, request.Password, cancellationToken);
+        return result.Outcome switch
+        {
+            RegistrationOutcome.Succeeded => StatusCode(201, new { message = "Cadastro concluído. Entre para continuar." }),
+            RegistrationOutcome.AlreadyRegistered => ApiProblems.Result(409, "OWNER_ALREADY_REGISTERED", "Já existe um cadastro. Entre para continuar."),
+            RegistrationOutcome.RegistrationRequired => ApiProblems.Result(409, "REGISTRATION_REQUIRED", "Complete o cadastro existente."),
+            RegistrationOutcome.InvalidProfile => ApiProblems.Validation(result.Errors?.ToDictionary() ?? new Dictionary<string, string[]> { ["profile"] = ["Confira os dados informados."] }),
+            _ => ApiProblems.Result(500, "INTERNAL_ERROR", "Não foi possível concluir o cadastro.")
+        };
+    }
+
     [AllowAnonymous]
     [HttpGet("csrf")]
     public IActionResult Csrf()

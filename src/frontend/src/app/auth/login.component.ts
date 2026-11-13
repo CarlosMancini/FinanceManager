@@ -1,23 +1,25 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from './auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <section class="panel" aria-labelledby="login-title">
       <h2 id="login-title">Entrar</h2>
       @if (expired) { <p role="status">Sua sessão expirou. Entre novamente.</p> }
       @if (unavailable) { <p role="status">Não foi possível verificar sua sessão.</p> }
+      @if (registered) { <p role="status">Cadastro concluído. Entre para continuar.</p> }
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
       <form (ngSubmit)="submit()">
-        <label>Usuário <input name="username" [(ngModel)]="username" required autocomplete="username"></label>
+        <label>E-mail <input name="username" [(ngModel)]="username" required autocomplete="username"></label>
         <label>Senha <input name="password" type="password" [(ngModel)]="password" required autocomplete="current-password"></label>
         <button type="submit" [disabled]="busy() || !username || !password">{{ busy() ? 'Entrando…' : 'Entrar' }}</button>
       </form>
+      <p><a routerLink="/register">Criar conta</a></p>
     </section>
   `,
 })
@@ -27,6 +29,7 @@ export class LoginComponent {
   private readonly route = inject(ActivatedRoute);
   readonly expired = this.route.snapshot.queryParamMap.has('expired');
   readonly unavailable = this.route.snapshot.queryParamMap.has('unavailable');
+  readonly registered = this.route.snapshot.queryParamMap.has('registered');
   readonly error = signal('');
   readonly busy = signal(false);
   username = '';

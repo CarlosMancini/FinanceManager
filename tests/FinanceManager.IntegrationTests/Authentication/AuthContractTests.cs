@@ -2,6 +2,10 @@ using System.Net;
 using FinanceManager.Application.Authentication;
 using FinanceManager.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
+using FinanceManager.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using FinanceManager.Infrastructure.Authentication;
+using Microsoft.AspNetCore.Identity;
 
 namespace FinanceManager.IntegrationTests.Authentication;
 
@@ -69,8 +73,12 @@ public sealed class AuthContractTests
     internal static async Task ProvisionAsync(FinanceManagerApiFactory factory, CancellationToken cancellationToken)
     {
         using var scope = factory.Services.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<OwnerAccessService>();
-        Assert.Equal(ProvisionOutcome.Created,
-            await service.ProvisionAsync(AuthTestClient.Username, AuthTestClient.Password, cancellationToken));
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<Owner>>();
+        var owner = new Owner { Id = Guid.NewGuid(), ProvisioningSlot = 1, UserName = AuthTestClient.Username,
+            FullName = "Pessoa de Teste", BirthDate = new DateOnly(1990, 1, 1), Email = "titular@example.test",
+            PhoneNumber = "11999999999", RegistrationCompletedAtUtc = factory.Clock.GetUtcNow() };
+        var result = await users.CreateAsync(owner, AuthTestClient.Password);
+        Assert.True(result.Succeeded, string.Join(", ", result.Errors.Select(error => error.Code)));
+        cancellationToken.ThrowIfCancellationRequested();
     }
 }

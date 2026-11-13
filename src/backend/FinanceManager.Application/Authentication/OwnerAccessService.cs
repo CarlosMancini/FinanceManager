@@ -6,9 +6,6 @@ public sealed record OwnerLogin(CredentialOutcome Outcome, OwnerSession? Session
 
 public sealed class OwnerAccessService(IOwnerIdentity identity, IOwnerSessionStore sessions, TimeProvider clock)
 {
-    public Task<ProvisionOutcome> ProvisionAsync(string username, string password, CancellationToken cancellationToken) =>
-        identity.ProvisionAsync(username, password, cancellationToken);
-
     public async Task<OwnerLogin> LoginAsync(string username, string password, Guid? currentSessionId,
         CancellationToken cancellationToken)
     {

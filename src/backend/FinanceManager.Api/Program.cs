@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using FinanceManager.Api.Authentication;
-using FinanceManager.Api.Commands;
 using FinanceManager.Api.Http;
 using FinanceManager.Application.Authentication;
 using FinanceManager.Infrastructure;
@@ -36,15 +35,16 @@ builder.AddOwnerAuthentication();
 builder.Services.AddControllers(options => options.Filters.AddService<SessionAdmissionFilter>())
     .AddJsonOptions(options => options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)
     .ConfigureApiBehaviorOptions(options =>
-        options.InvalidModelStateResponseFactory = _ =>
-            ApiProblems.Result(400, "VALIDATION_FAILED", "Confira os dados informados."));
+        options.InvalidModelStateResponseFactory = context =>
+            ApiProblems.Validation(context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .ToDictionary(entry => entry.Key, _ => new[] { "Confira o valor informado." })));
 
 await using var app = builder.Build();
 if (provisionOwner)
 {
-    await using var scope = app.Services.CreateAsyncScope();
-    Environment.ExitCode = await ProvisionOwnerCommand.RunAsync(
-        scope.ServiceProvider.GetRequiredService<OwnerAccessService>(), CancellationToken.None);
+    Console.Error.WriteLine("Crie a conta pela interface do aplicativo.");
+    Environment.ExitCode = 1;
     return;
 }
 

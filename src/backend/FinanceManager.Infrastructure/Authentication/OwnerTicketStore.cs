@@ -42,7 +42,7 @@ public sealed class OwnerTicketStore(IServiceScopeFactory scopes, TimeProvider c
         var row = await (
             from session in database.OwnerSessions.AsNoTracking()
             join owner in database.Users.AsNoTracking() on session.OwnerId equals owner.Id
-            where session.Id == id
+            where session.Id == id && owner.RegistrationCompletedAtUtc != null
             select new { Session = session, owner.UserName }
         ).SingleOrDefaultAsync(cancellationToken);
 

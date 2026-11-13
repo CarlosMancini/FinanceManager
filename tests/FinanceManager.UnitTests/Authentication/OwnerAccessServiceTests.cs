@@ -11,12 +11,14 @@ public sealed class OwnerAccessServiceTests
     private readonly SessionStore sessions = new();
 
     [Fact]
-    public async Task SecondProvisionIsRejected()
+    public async Task SecondRegistrationIsRejected()
     {
-        var service = Service();
+        var service = new OwnerRegistrationService(new RegistrationStore(), TimeProvider.System);
         var token = TestContext.Current.CancellationToken;
-        Assert.Equal(ProvisionOutcome.Created, await service.ProvisionAsync("titular", "sintetica", token));
-        Assert.Equal(ProvisionOutcome.AlreadyProvisioned, await service.ProvisionAsync("outro", "sintetica", token));
+        var first = await service.RegisterAsync("Titular", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", token);
+        var second = await service.RegisterAsync("Outro", null, new DateOnly(1990, 1, 1), "c@d", "11999999999", "SenhaValida!123", token);
+        Assert.Equal(RegistrationOutcome.Succeeded, first.Outcome);
+        Assert.Equal(RegistrationOutcome.AlreadyRegistered, second.Outcome);
     }
 
     [Theory]
@@ -64,17 +66,25 @@ public sealed class OwnerAccessServiceTests
 
     private sealed class Identity : IOwnerIdentity
     {
-        private bool provisioned;
         public CredentialOutcome Outcome { get; set; } = CredentialOutcome.Accepted;
         public Task<CredentialCheck> CheckAsync(string username, string password, CancellationToken cancellationToken) =>
             Task.FromResult(new CredentialCheck(Outcome, Guid.Parse("235162dc-472f-4239-94bd-157dcf4bc003"), username));
 
-        public Task<ProvisionOutcome> ProvisionAsync(string username, string password, CancellationToken cancellationToken)
+    }
+
+    private sealed class RegistrationStore : IOwnerRegistrationStore
+    {
+        private bool registered;
+        public Task<RegistrationState> GetStateAsync(CancellationToken token) => Task.FromResult(registered ? RegistrationState.Completed : RegistrationState.Empty);
+        public Task<RegistrationResult> RegisterAsync(RegistrationProfile profile, string password, CancellationToken token)
         {
-            var outcome = provisioned ? ProvisionOutcome.AlreadyProvisioned : ProvisionOutcome.Created;
-            provisioned = true;
-            return Task.FromResult(outcome);
+            var outcome = registered ? RegistrationOutcome.AlreadyRegistered : RegistrationOutcome.Succeeded;
+            registered = true;
+            return Task.FromResult(new RegistrationResult(outcome));
         }
+        public Task<RegistrationResult> IssueAuthorizationAsync(Guid owner, string version, byte[] hash, DateTimeOffset verified, CancellationToken token) => throw new NotSupportedException();
+        public Task<RegistrationAuthorization?> FindAuthorizationAsync(byte[] hash, CancellationToken token) => throw new NotSupportedException();
+        public Task<RegistrationResult> CompleteAsync(byte[] hash, RegistrationProfile profile, string password, DateTimeOffset now, CancellationToken token) => throw new NotSupportedException();
     }
 
     private sealed class SessionStore : IOwnerSessionStore

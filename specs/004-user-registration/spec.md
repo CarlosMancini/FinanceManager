@@ -13,6 +13,8 @@
 ### Session 2026-11-12
 
 - Q: Como tratar a instalação que já tem um titular provisionado e dados financeiros? → A: Permitir ao titular existente completar o cadastro, mantendo sua identidade e dados financeiros, e incluir a transição para login por e-mail nesta feature (opção B).
+- Q: Enquanto o titular antigo ainda não completou o cadastro, o que deve acontecer ao entrar com o nome de acesso e a senha atuais? → A: Validar as credenciais antigas e encaminhar obrigatoriamente à conclusão do cadastro, sem acesso financeiro (opção A).
+- Q: Por quanto tempo a comprovação das credenciais antigas deve permitir concluir o cadastro sem pedir a senha novamente? → A: Dez minutos após a comprovação, sem renovação automática; após a expiração, exigir as credenciais antigas novamente, preservando os dados não secretos preenchidos (opção A).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -50,7 +52,7 @@ Como titular cadastrado, quero entrar com meu e-mail e senha e retomar minhas op
 3. **Given** senha incorreta ou e-mail não cadastrado, **When** tenta entrar, **Then** não recebe acesso e vê a mesma mensagem genérica em português, sem indicação de qual credencial existe. Tentativas repetidas recebem a proteção já existente na fundação. (FR-009, FR-013)
 4. **Given** sessão ausente, revogada ou expirada, **When** tenta acessar uma área financeira, **Then** precisa fazer login; ao sair ou completar 30 minutos sem atividade autenticada, perde o acesso conforme FND-01. (FR-012)
 5. **Given** cadastro concluído, **When** tenta entrar apenas com o antigo nome de acesso, **Then** o acesso é rejeitado; o identificador de login passa a ser o e-mail. (FR-009)
-6. **Given** sessão ainda válida, **When** reabre a aplicação, **Then** segue a navegação autenticada existente sem encerrar a sessão apenas por reabrir a aplicação. (FR-001)
+6. **Given** cadastro concluído e sessão ainda válida, **When** reabre a aplicação, **Then** segue a navegação autenticada existente sem encerrar a sessão apenas por reabrir a aplicação. (FR-001)
 
 ---
 
@@ -70,6 +72,8 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 4. **Given** falha na conclusão, **When** a operação termina sem sucesso, **Then** cadastro e credenciais anteriores permanecem utilizáveis para repetir a transição, sem atualização parcial. (FR-014–016)
 5. **Given** transição concluída, **When** tenta reutilizar credenciais ou autorização de transição anteriores, **Then** não consegue alterar novamente o cadastro; sessões anteriores também não concedem acesso. (FR-016)
 6. **Given** duas conclusões simultâneas, **When** ambas tentam salvar, **Then** somente uma é efetivada e a outra não sobrescreve seus dados ou credenciais. (FR-016)
+7. **Given** titular provisionado com cadastro incompleto, **When** informa nome de acesso e senha atuais no login, **Then** a comprovação válida o encaminha obrigatoriamente à conclusão do cadastro, sem conceder acesso financeiro. (FR-015)
+8. **Given** credenciais antigas comprovadas, **When** tenta concluir o cadastro antes de dez minutos, **Then** a autorização permite a conclusão; ao completar dez minutos, a conclusão é recusada até nova comprovação, preservando os dados não secretos preenchidos. Atividade durante o preenchimento não renova esse prazo. (FR-017)
 
 ### Edge Cases
 
@@ -81,12 +85,13 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 - Retornar do cadastro ao login não cria conta. Senhas não permanecem preenchidas ao abandonar a tela ou após sucesso.
 - Dois cadastros simultâneos ou repetidos não criam titulares adicionais, mesmo com e-mails diferentes.
 - Falha ou tentativa sem comprovação das credenciais antigas não pode reivindicar o titular existente, mesmo na instalação local.
+- A autorização de transição expira ao completar dez minutos desde a comprovação, inclusive durante o preenchimento. A conclusão após esse limite exige nova comprovação das credenciais antigas, preservando os dados não secretos preenchidos.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: A aplicação DEVE apresentar o login como tela inicial para pessoas sem sessão válida, inclusive após expiração ou saída. Sessões válidas seguem a navegação autenticada existente.
+- **FR-001**: A aplicação DEVE apresentar o login como tela inicial para pessoas sem sessão válida, inclusive após expiração ou saída. Sessões válidas de titular com cadastro concluído seguem a navegação autenticada existente; cadastro incompleto segue a conclusão obrigatória de FR-012 e FR-015.
 - **FR-002**: O login DEVE oferecer **Criar conta**, que abre tela dedicada de cadastro com opção de voltar ao login. A opção permanece disponível para orientar sobre conta existente ou transição pendente.
 - **FR-003**: O cadastro DEVE solicitar nome completo, apelido/nome pelo qual deseja ser chamado, data de nascimento, e-mail, telefone e senha. Apenas o apelido é opcional. Campos obrigatórios ausentes ou só com espaços DEVEM impedir a conclusão, inclusive em tentativas fora da interface.
 - **FR-004**: O sistema DEVE salvar nome e apelido preservando a grafia, removendo somente espaços nas extremidades. Apelido vazio é ausente. O nascimento DEVE ser uma data civil existente e não futura, avaliada em America/Sao_Paulo, sem idade mínima.
@@ -97,11 +102,12 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 - **FR-009**: Após concluir o cadastro, o sistema DEVE autenticar exclusivamente pelo e-mail e senha definidos. Nome completo, apelido e antigo nome de acesso NÃO DEVEM funcionar como identificadores alternativos. Credenciais inválidas DEVEM produzir a mesma mensagem genérica, sem conceder sessão.
 - **FR-010**: O sucesso do cadastro inicial ou da transição DEVE ser confirmado em português e levar ao login para autenticação explícita, sem login automático e sem transportar a senha para a tela de login.
 - **FR-011**: O login bem-sucedido DEVE preservar MOV-05 da feature 002: histórico de movimentações quando existe alguma conta financeira, ou formulário de cadastro de conta financeira quando não existe nenhuma. Conta de usuário e conta financeira são conceitos distintos.
-- **FR-012**: O sistema DEVE preservar saída com revogação, expiração após 30 minutos sem atividade autenticada e proteção por titularidade conforme FND-01. Cadastro e transição não DEVEM conceder acesso financeiro sem login concluído.
+- **FR-012**: O sistema DEVE preservar saída com revogação, expiração após 30 minutos sem atividade autenticada e proteção por titularidade conforme FND-01. Cadastro e transição não DEVEM conceder acesso financeiro sem cadastro e login por e-mail concluídos. Sessões anteriores de titular com cadastro incompleto NÃO DEVEM permitir acesso financeiro; o titular DEVE ser encaminhado à conclusão do cadastro.
 - **FR-013**: O sistema DEVE preservar a proteção existente contra tentativas repetidas de autenticação e aplicá-la também à comprovação de credenciais na transição. Cadastro e transição DEVEM manter as proteções constitucionais contra alterações forjadas. Credenciais e dados pessoais do cadastro NÃO DEVEM aparecer em logs. Somente as funções de acesso e cadastro desta feature podem ser usadas sem autenticação financeira.
 - **FR-014**: Erros DEVEM ser apresentados em português, identificando campos corrigíveis sem expor detalhes internos. Falha de gravação NÃO DEVE produzir confirmação de sucesso. Erros de validação DEVEM permitir corrigir os dados não secretos sem preenchê-los novamente; senhas DEVEM ser descartadas ao abandonar a tela ou concluir a operação.
-- **FR-015**: Para titular provisionado sem cadastro completo, o sistema DEVE permitir completar o cadastro pela interface, mediante comprovação do nome de acesso e senha atuais. A comprovação autoriza somente a conclusão do cadastro daquele titular; não permite criar outro, acessar dados financeiros ou dispensar campos e critérios de FR-003–007. A transição NÃO DEVE estar disponível para titular com cadastro concluído.
+- **FR-015**: Para titular provisionado sem cadastro completo, o sistema DEVE permitir completar o cadastro pela interface, mediante comprovação do nome de acesso e senha atuais, tanto pelo login quanto por **Criar conta → Completar cadastro existente**. No login, credenciais antigas válidas DEVEM encaminhar obrigatoriamente à conclusão do cadastro, sem conceder acesso financeiro. A comprovação autoriza somente a conclusão do cadastro daquele titular; não permite criar outro, acessar dados financeiros ou dispensar campos e critérios de FR-003–007. A transição NÃO DEVE estar disponível para titular com cadastro concluído.
 - **FR-016**: A transição DEVE preservar identificador, vínculos e todos os registros financeiros do titular, sem criar outra identidade. Dados e novas credenciais DEVEM ser salvos como uma única alteração; falhas preservam o estado anterior. Após sucesso, sessões e autorizações de transição anteriores DEVEM ser invalidadas; somente o novo login por e-mail e senha permite reentrar. Conclusões simultâneas NÃO DEVEM sobrescrever a primeira conclusão efetivada.
+- **FR-017**: A autorização para concluir a transição DEVE expirar ao completar dez minutos desde a comprovação das credenciais antigas, sem renovação automática por atividade. O sistema DEVE verificar sua validade ao concluir o cadastro e rejeitar a conclusão com autorização expirada, sem alterar dados ou credenciais persistidos. Após a expiração, DEVE solicitar nova comprovação das credenciais antigas, preservando os dados não secretos preenchidos; uma nova comprovação válida inicia novo prazo de dez minutos.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -109,6 +115,7 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 - **Credencial de acesso**: E-mail identificador e comprovação protegida da senha, cuja forma original não é recuperável.
 - **Sessão**: Acesso autenticado revogável, vinculado ao titular, com as regras de inatividade da fundação.
 - **Estado de conclusão do cadastro**: Distingue titular provisionado que precisa completar os dados daquele com login definitivo por e-mail. A transição mantém a identidade.
+- **Autorização de transição**: Permissão restrita à conclusão do cadastro do titular comprovado, válida por dez minutos desde a comprovação, sem renovação automática e invalidada após a conclusão.
 
 ## Success Criteria *(mandatory)*
 
@@ -119,14 +126,15 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 - **SC-003**: Em 100% das tentativas verificadas, cadastro inicial ou transição concluídos permitem login pelo e-mail e senha definidos, inclusive após reiniciar a aplicação, e seguem o destino correto para zero contas ou contas existentes.
 - **SC-004**: Em 100% dos cenários de repetição, concorrência e falha, a instalação mantém no máximo um titular, sem cadastro parcial nem alteração de um titular por pessoa sem comprovação válida.
 - **SC-005**: Em 100% das transições verificadas com histórico sintético de contas, movimentações, obrigações e pagamentos, identificador do titular, quantidade de registros, vínculos e valores permanecem iguais antes e depois.
-- **SC-006**: Em 100% dos cenários de acesso sem sessão, credenciais incorretas, saída, expiração e reutilização de sessões anteriores à transição, o acesso financeiro é recusado com orientação em português.
+- **SC-006**: Em 100% dos cenários de acesso sem sessão, credenciais incorretas, saída, expiração, cadastro incompleto e reutilização de sessões anteriores à transição, o acesso financeiro é recusado com orientação em português. Credenciais antigas válidas no login encaminham à conclusão do cadastro.
+- **SC-007**: Nos testes temporais da transição, a autorização permite concluir antes de dez minutos e é rejeitada ao completar esse prazo, mesmo com atividade durante o preenchimento. Em 100% das tentativas com autorização expirada, dados e credenciais persistidos permanecem inalterados, os dados não secretos preenchidos são preservados e somente nova comprovação válida permite repetir a conclusão.
 
 ## Assumptions
 
 - A expressão original “sistema de implementação de senha” foi interpretada como recuperação/redefinição de senha. Recuperação, troca posterior de senha, edição posterior de perfil, exclusão de conta, confirmação de e-mail/telefone e autenticação adicional ficam fora do escopo. Definir senha durante a transição integra o cadastro aprovado.
 - A versão continua local e limitada a um titular, conforme a constituição 1.3.0. Não introduz múltiplos usuários, perfis de permissão ou cadastro público remoto.
 - Política de senha, telefone de 10 a 15 dígitos, ausência de idade mínima e retorno ao login após cadastro são premissas propostas para revisão. Não há troca periódica obrigatória de senha nesta feature.
-- A tela inicial de login se aplica a quem não tem sessão válida; não exige encerrar sessões válidas a cada abertura.
+- A tela inicial de login se aplica a quem não tem sessão válida; não exige encerrar sessões válidas a cada abertura. Para titular com cadastro incompleto, a conclusão do cadastro é obrigatória antes de qualquer acesso financeiro, inclusive quando possui sessão anterior.
 - Para titular provisionado, as credenciais atuais comprovam identidade. Quem não as possui não consegue concluir a transição, pois recuperação de senha está fora do escopo.
 - Dependências: [FND-01 e titularidade da fundação](../001-financial-foundation/spec.md) e [MOV-05 e navegação após login](../002-transactions/spec.md). Esta feature evolui o provisionamento e a identificação de acesso, mantendo regras financeiras e de sessão.
 - O plano desta feature deverá explicitar a adequação dos contratos e do provisionamento antigos ao cadastro e login por e-mail. Artefatos anteriores não foram alterados nesta fase. A restrição histórica de ausência de cadastro pela interface na feature 001 é evoluída por esta especificação, sem ampliar o limite constitucional de um titular.

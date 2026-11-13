@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace FinanceManager.Infrastructure;
 
@@ -30,9 +31,15 @@ public static class DependencyInjection
         })
         .AddEntityFrameworkStores<FinanceManagerDbContext>()
         .AddSignInManager();
+        services.RemoveAll<IUserValidator<Owner>>();
+        services.RemoveAll<IPasswordValidator<Owner>>();
+        services.AddScoped<IUserValidator<Owner>, RegistrationUserValidator>();
+        services.AddScoped<IPasswordValidator<Owner>, RegistrationPasswordValidator>();
         services.AddScoped<IOwnerIdentity, IdentityOwnerAdapter>();
         services.AddScoped<IOwnerSessionStore, SqlOwnerSessionStore>();
         services.AddScoped<OwnerAccessService>();
+        services.AddScoped<IOwnerRegistrationStore, SqlOwnerRegistrationStore>();
+        services.AddScoped<OwnerRegistrationService>();
         services.AddSingleton<OwnerTicketStore>();
         services.AddScoped<IFinancialAccountRepository, SqlFinancialAccountRepository>();
         services.AddScoped<FinancialAccountService>();
