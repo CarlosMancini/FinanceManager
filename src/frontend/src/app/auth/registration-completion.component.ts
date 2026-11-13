@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { RegistrationFormComponent } from './registration-form.component';
@@ -11,7 +11,7 @@ import { RegistrationData, saoPauloToday, validateRegistration } from './registr
 <section class="panel" aria-labelledby="completion-title">
   <h2 id="completion-title">Completar cadastro existente</h2>
   @if (loading()) { <p role="status">Verificando autorização…</p> }
-  @if (message()) { <p role="alert">{{ message() }}</p> }
+  <p #errorSummary role="alert" tabindex="-1" [hidden]="!message()">{{ message() }}</p>
   @if (!loading() && !authorized()) {
     <p>Comprove seu acesso anterior para continuar.</p>
     <form (ngSubmit)="prove()">
@@ -27,6 +27,7 @@ import { RegistrationData, saoPauloToday, validateRegistration } from './registr
   <p><a routerLink="/login">Voltar ao login</a></p>
 </section>` })
 export class RegistrationCompletionComponent implements OnInit, OnDestroy {
+  @ViewChild('errorSummary') private errorSummary?: ElementRef<HTMLElement>;
   private readonly transition = inject(RegistrationTransitionService);
   private readonly registration = inject(RegistrationService);
   private readonly router = inject(Router);
@@ -51,14 +52,14 @@ export class RegistrationCompletionComponent implements OnInit, OnDestroy {
     if (this.busy()) return;
     this.busy.set(true); this.message.set('');
     try { await this.transition.prove(this.username, this.legacyPassword); this.authorized.set(true); }
-    catch (error) { this.message.set(this.messageFor(error, 'Não foi possível comprovar o acesso.')); }
+    catch (error) { this.message.set(this.messageFor(error, 'Não foi possível comprovar o acesso.')); this.focusError(); }
     finally { this.legacyPassword = ''; this.busy.set(false); }
   }
 
   async submit() {
     if (this.busy()) return;
     const errors = validateRegistration(this.data, saoPauloToday()); this.errors.set(errors);
-    if (Object.keys(errors).length) { this.message.set('Confira os campos informados.'); return; }
+    if (Object.keys(errors).length) { this.message.set('Confira os campos informados.'); this.focusError(); return; }
     this.busy.set(true); this.message.set('');
     try {
       await this.transition.complete(this.data);
@@ -74,6 +75,7 @@ export class RegistrationCompletionComponent implements OnInit, OnDestroy {
       } else {
         this.message.set(this.messageFor(error, 'Não foi possível concluir o cadastro. Tente novamente.'));
       }
+      this.focusError();
       if (error instanceof HttpErrorResponse && (error.status === 0 || error.status === 409 || error.status >= 500)) {
         try { if ((await this.registration.state()).state === 'completed') { this.data.password = ''; await this.router.navigate(['/login'], { queryParams: { registered: true } }); } } catch { /* manter formulário */ }
       }
@@ -83,4 +85,5 @@ export class RegistrationCompletionComponent implements OnInit, OnDestroy {
   private messageFor(error: unknown, fallback: string) {
     return error instanceof HttpErrorResponse && typeof error.error?.title === 'string' ? error.error.title : fallback;
   }
+  private focusError() { setTimeout(() => this.errorSummary?.nativeElement.focus()); }
 }

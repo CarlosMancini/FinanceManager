@@ -7,6 +7,22 @@ import { RegistrationService } from './registration.service';
 import { RegistrationTransitionService } from './registration-transition.service';
 
 describe('RegistrationCompletionComponent', () => {
+  it('focuses the error summary when completion data is invalid', async () => {
+    await TestBed.configureTestingModule({ imports: [RegistrationCompletionComponent], providers: [provideRouter([]),
+      { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'legacyPending' }) } },
+      { provide: RegistrationTransitionService, useValue: { authorization: vi.fn().mockResolvedValue(undefined) } }] }).compileComponents();
+    const fixture = TestBed.createComponent(RegistrationCompletionComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.componentInstance.submit();
+    fixture.detectChanges();
+    await new Promise(resolve => setTimeout(resolve));
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('[role="alert"]'));
+    expect(document.activeElement?.textContent).toContain('Confira os campos');
+    fixture.nativeElement.remove();
+  });
   it('checks availability after a lost response and directs a completed registration to login', async () => {
     const state = vi.fn().mockResolvedValueOnce({ state: 'legacyPending' }).mockResolvedValueOnce({ state: 'completed' });
     const transition = { authorization: vi.fn().mockResolvedValue(undefined), complete: vi.fn().mockRejectedValue(new HttpErrorResponse({ status: 0 })) };

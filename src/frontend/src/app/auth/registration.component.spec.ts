@@ -5,6 +5,21 @@ import { RegistrationComponent } from './registration.component';
 import { RegistrationService } from './registration.service';
 
 describe('RegistrationComponent', () => {
+  it('moves focus to the error summary after invalid submission', async () => {
+    await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
+      { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'empty' }) } }] }).compileComponents();
+    const fixture = TestBed.createComponent(RegistrationComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.componentInstance.submit();
+    fixture.detectChanges();
+    await new Promise(resolve => setTimeout(resolve));
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('[role="alert"]'));
+    expect(document.activeElement?.textContent).toContain('Confira os campos');
+    fixture.nativeElement.remove();
+  });
   it('offers the completion path for an existing legacy owner', async () => {
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
       { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'legacyPending' }) } }] }).compileComponents();
