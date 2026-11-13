@@ -55,3 +55,9 @@ T001 concluída.
 
 - Passaram 98 testes unitários .NET, 78 testes de integração SQL e 49 testes Angular. O build Angular e `dotnet ef migrations has-pending-model-changes` passaram; a migração completa também foi aplicada a uma base sintética vazia. A primeira tentativa de verificação EF falhou por ausência da conexão de design e passou após configurá-la.
 - Evidências parciais de segurança e interface estão em `validation-security.md` e `validation-ui.md`. T050 e T051 ainda exigem os cenários ali apontados; T052 permanece aberta até a conclusão de suas dependências e revisão da matriz. T053 está pendente pela indisponibilidade de participantes, registrada em `validation-usability.md`; T054 depende das evidências finais.
+
+## Retomada das verificações · 2026-11-13
+
+- Em execução sequencial, passaram 98 testes unitários .NET, 78 testes de integração SQL Server LocalDB e 49 testes Angular; os builds da API e Angular passaram. `dotnet ef migrations has-pending-model-changes --no-build` confirmou que não há alterações pendentes no modelo.
+- No sandbox, a proteção de dados do ASP.NET falhou ao acessar as chaves locais e causou HTTP 500 na obtenção de CSRF. A suíte de integração completa passou ao executá-la no ambiente normal. O Node 24.22.2 fixado está em `.local-tools/node/node_modules/node/bin/node.exe`.
+- Essas verificações não encerram T050–T052: continuam necessárias a inspeção sistemática de privacidade, a validação interativa dos fluxos de interface e a consolidação da matriz de verificação. T053 e T054 permanecem pendentes.
