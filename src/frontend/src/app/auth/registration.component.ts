@@ -11,7 +11,7 @@ import { RegistrationFormComponent } from './registration-form.component';
   @if (loading()) { <p role="status">Verificando cadastro…</p> }
   @if (message()) { <p role="alert">{{ message() }}</p> }
   @if (state() === 'completed') { <p>Já existe um cadastro. Entre para continuar.</p> }
-  @if (state() === 'legacyPending') { <p>Existe um cadastro que precisa ser completado.</p> }
+  @if (state() === 'legacyPending') { <p>Existe um cadastro que precisa ser completado.</p><p><a routerLink="/register/complete">Completar cadastro existente</a></p> }
   @if (state() === 'empty') {
     <app-registration-form [data]="data" [errors]="errors()" [busy]="busy()" (submitted)="submit()" />
   }

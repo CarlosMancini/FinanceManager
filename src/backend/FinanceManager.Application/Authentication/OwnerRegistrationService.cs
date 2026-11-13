@@ -9,6 +9,14 @@ public sealed class OwnerRegistrationService(IOwnerRegistrationStore store, Time
     public async Task<RegistrationResult> RegisterAsync(string? fullName, string? nickname, DateOnly? birthDate,
         string? email, string? phoneNumber, string? password, CancellationToken cancellationToken)
     {
+        var (profile, errors) = Validate(fullName, nickname, birthDate, email, phoneNumber, password);
+        if (errors.Count > 0) return new(RegistrationOutcome.InvalidProfile, errors);
+        return await store.RegisterAsync(profile!, password!, cancellationToken);
+    }
+
+    internal (RegistrationProfile? Profile, Dictionary<string, string[]> Errors) Validate(string? fullName, string? nickname,
+        DateOnly? birthDate, string? email, string? phoneNumber, string? password)
+    {
         var errors = new Dictionary<string, string[]>();
         RegistrationProfile? profile = null;
         try
@@ -30,7 +38,6 @@ public sealed class OwnerRegistrationService(IOwnerRegistrationStore store, Time
         }
         if (!RegistrationPasswordPolicy.Evaluate(password).IsValid)
             errors["password"] = ["Confira os critérios da senha."];
-        if (errors.Count > 0) return new(RegistrationOutcome.InvalidProfile, errors);
-        return await store.RegisterAsync(profile!, password!, cancellationToken);
+        return (profile, errors);
     }
 }

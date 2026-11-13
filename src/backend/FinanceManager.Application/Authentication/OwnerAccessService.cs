@@ -2,14 +2,14 @@ using FinanceManager.Domain.Authentication;
 
 namespace FinanceManager.Application.Authentication;
 
-public sealed record OwnerLogin(CredentialOutcome Outcome, OwnerSession? Session = null, string? Username = null);
+public sealed record OwnerLogin(CredentialOutcome Outcome, OwnerSession? Session = null, string? Email = null);
 
 public sealed class OwnerAccessService(IOwnerIdentity identity, IOwnerSessionStore sessions, TimeProvider clock)
 {
-    public async Task<OwnerLogin> LoginAsync(string username, string password, Guid? currentSessionId,
+    public async Task<OwnerLogin> LoginAsync(string email, string password, Guid? currentSessionId,
         CancellationToken cancellationToken)
     {
-        var credentials = await identity.CheckAsync(username, password, cancellationToken);
+        var credentials = await identity.CheckAsync(email, password, cancellationToken);
         if (credentials.Outcome != CredentialOutcome.Accepted)
         {
             return new OwnerLogin(credentials.Outcome);
@@ -23,12 +23,18 @@ public sealed class OwnerAccessService(IOwnerIdentity identity, IOwnerSessionSto
             {
                 return new OwnerLogin(CredentialOutcome.Rejected);
             }
-            return new OwnerLogin(CredentialOutcome.Accepted, existing, credentials.Username);
+            return new OwnerLogin(CredentialOutcome.Accepted, existing, credentials.Email);
         }
 
         var session = new OwnerSession(credentials.OwnerId, now);
         await sessions.CreateAsync(session, cancellationToken);
-        return new OwnerLogin(CredentialOutcome.Accepted, session, credentials.Username);
+        return new OwnerLogin(CredentialOutcome.Accepted, session, credentials.Email);
+    }
+
+    public async Task<string?> GetSessionEmailAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var session = await sessions.FindAsync(id, cancellationToken);
+        return session is null ? null : await identity.FindEmailAsync(session.OwnerId, cancellationToken);
     }
 
     public Task<bool> AdmitAsync(Guid id, CancellationToken cancellationToken) =>

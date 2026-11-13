@@ -5,6 +5,14 @@ import { RegistrationComponent } from './registration.component';
 import { RegistrationService } from './registration.service';
 
 describe('RegistrationComponent', () => {
+  it('offers the completion path for an existing legacy owner', async () => {
+    await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
+      { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'legacyPending' }) } }] }).compileComponents();
+    const fixture = TestBed.createComponent(RegistrationComponent);
+    await fixture.componentInstance.ngOnInit(); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Completar cadastro existente');
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe('/register/complete');
+  });
   it('offers a return link to login', async () => {
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]), { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'empty' }), register: vi.fn() } }] }).compileComponents();
     const fixture = TestBed.createComponent(RegistrationComponent);

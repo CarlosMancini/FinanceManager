@@ -5,6 +5,7 @@ namespace FinanceManager.IntegrationTests.Authentication;
 internal static class AuthTestClient
 {
     public const string Username = "titular";
+    public const string Email = "titular@example.test";
     public const string Password = "Somente-Teste!1234";
     public const string CookieName = "__Host-FinanceManager";
 
@@ -18,10 +19,10 @@ internal static class AuthTestClient
     }
 
     public static async Task<HttpResponseMessage> LoginAsync(HttpClient client, CancellationToken cancellationToken,
-        string password = Password, string username = Username)
+        string password = Password, string email = Email)
     {
         var csrf = await GetCsrfAsync(client, cancellationToken);
-        return await PostAsync(client, "/api/auth/login", csrf, new { username, password }, cancellationToken);
+        return await PostAsync(client, "/api/auth/login", csrf, new { email, password }, cancellationToken);
     }
 
     public static async Task<HttpResponseMessage> PostAsync(HttpClient client, string path, string? csrf,

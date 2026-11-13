@@ -23,7 +23,7 @@ public sealed class AuthContractTests
             await AuthTestClient.AssertProblemAsync(missing, 401, "SESSION_REQUIRED", token);
         await ProvisionAsync(factory, token);
         using (var denied = await AuthTestClient.PostAsync(client, "/api/auth/login", null,
-            new { username = AuthTestClient.Username, password = AuthTestClient.Password }, token))
+            new { email = AuthTestClient.Email, password = AuthTestClient.Password }, token))
             await AuthTestClient.AssertProblemAsync(denied, 403, "INVALID_CSRF_TOKEN", token);
         using var login = await AuthTestClient.LoginAsync(client, token);
         Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
@@ -37,6 +37,11 @@ public sealed class AuthContractTests
         using var session = await client.GetAsync("/api/auth/session", token);
         Assert.Equal(HttpStatusCode.OK, session.StatusCode);
         Assert.True(session.Headers.CacheControl?.NoStore);
+        using (var json = System.Text.Json.JsonDocument.Parse(await session.Content.ReadAsStringAsync(token)))
+        {
+            Assert.Equal(AuthTestClient.Email, json.RootElement.GetProperty("email").GetString());
+            Assert.False(json.RootElement.TryGetProperty("username", out _));
+        }
         using (var denied = await AuthTestClient.PostAsync(client, "/api/auth/logout", null, null, token))
             await AuthTestClient.AssertProblemAsync(denied, 403, "INVALID_CSRF_TOKEN", token);
 
@@ -58,6 +63,8 @@ public sealed class AuthContractTests
         await ProvisionAsync(factory, token);
         using var first = await AuthTestClient.LoginAsync(client, token, password: "incorreta");
         await AuthTestClient.AssertProblemAsync(first, 401, "INVALID_CREDENTIALS", token);
+        using (var body = System.Text.Json.JsonDocument.Parse(await first.Content.ReadAsStringAsync(token)))
+            Assert.Equal("Credenciais inválidas.", body.RootElement.GetProperty("title").GetString());
 
         var throttled = false;
         for (var attempt = 0; attempt < 9 && !throttled; attempt++)
@@ -68,6 +75,94 @@ public sealed class AuthContractTests
                 await AuthTestClient.AssertProblemAsync(response, 429, "LOGIN_THROTTLED", token);
         }
         Assert.True(throttled);
+    }
+
+    [Theory]
+    [InlineData(" TITULAR@EXAMPLE.TEST ", AuthTestClient.Password, 204)]
+    [InlineData(AuthTestClient.Username, AuthTestClient.Password, 401)]
+    [InlineData(AuthTestClient.Email, " somente-Teste!1234", 401)]
+    public async Task LoginUsesOnlyNormalizedEmailAndExactPassword(string email, string password, int expected)
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateAsync();
+        await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
+        await ProvisionAsync(factory, token);
+        using var client = factory.CreateHttpsClient();
+        using var response = await AuthTestClient.LoginAsync(client, token, password, email);
+        Assert.Equal(expected, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OldUsernameRequestIsRejected()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateAsync();
+        await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
+        await ProvisionAsync(factory, token);
+        using var client = factory.CreateHttpsClient();
+        var csrf = await AuthTestClient.GetCsrfAsync(client, token);
+        using var response = await AuthTestClient.PostAsync(client, "/api/auth/login", csrf,
+            new { username = AuthTestClient.Username, password = AuthTestClient.Password }, token);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task FiveFailuresLockTheOwnerForFiveMinutesWithoutCreatingASession()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateAsync();
+        await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
+        await ProvisionAsync(factory, token);
+        using var client = factory.CreateHttpsClient();
+        var before = DateTimeOffset.UtcNow;
+        for (var attempt = 1; attempt <= 5; attempt++)
+        {
+            using var response = await AuthTestClient.LoginAsync(client, token, password: "incorreta");
+            await AuthTestClient.AssertProblemAsync(response, attempt == 5 ? 429 : 401,
+                attempt == 5 ? "LOGIN_THROTTLED" : "INVALID_CREDENTIALS", token);
+        }
+        using var scope = factory.Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<Owner>>();
+        var owner = await users.FindByNameAsync(AuthTestClient.Username);
+        Assert.InRange(owner!.LockoutEnd!.Value, before.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(5).AddSeconds(2));
+        using var correctWhileLocked = await AuthTestClient.LoginAsync(client, token);
+        await AuthTestClient.AssertProblemAsync(correctWhileLocked, 429, "LOGIN_THROTTLED", token);
+        using var session = await client.GetAsync("/api/auth/session", token);
+        await AuthTestClient.AssertProblemAsync(session, 401, "SESSION_REQUIRED", token);
+    }
+
+    [Fact]
+    public async Task PerIpRateLimitAppliesEvenWhenNoOwnerMatches()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var database = new SqlServerTestDatabase();
+        await database.MigrateAsync();
+        await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
+        await ProvisionAsync(factory, token);
+        using var client = factory.CreateHttpsClient();
+        for (var attempt = 1; attempt <= 11; attempt++)
+        {
+            using var response = await AuthTestClient.LoginAsync(client, token, email: "inexistente@example.test");
+            await AuthTestClient.AssertProblemAsync(response, attempt <= 10 ? 401 : 429,
+                attempt <= 10 ? "INVALID_CREDENTIALS" : "LOGIN_THROTTLED", token);
+        }
+    }
+
+    [Fact]
+    public async Task IncompleteLegacyOwnerCannotLogInWithTheOldName()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await LegacyRegistrationScenario.CreateAsync(token);
+        await using (var db = scenario.Database.CreateContext()) await db.Database.MigrateAsync(token);
+        await using var factory = new FinanceManagerApiFactory(scenario.Database.ConnectionString);
+        using var client = factory.CreateHttpsClient();
+        using var response = await AuthTestClient.LoginAsync(client, token, LegacyRegistrationScenario.Password, LegacyRegistrationScenario.Username);
+        await AuthTestClient.AssertProblemAsync(response, 401, "INVALID_CREDENTIALS", token);
+        using var session = await client.GetAsync("/api/auth/session", token);
+        await AuthTestClient.AssertProblemAsync(session, 401, "SESSION_REQUIRED", token);
     }
 
     internal static async Task ProvisionAsync(FinanceManagerApiFactory factory, CancellationToken cancellationToken)

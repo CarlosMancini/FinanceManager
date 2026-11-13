@@ -14,12 +14,12 @@ public sealed class OwnerTicketStore(IServiceScopeFactory scopes, TimeProvider c
     public const string SessionClaim = "finance_manager_session";
     public const string Scheme = "FinanceManager.Owner";
 
-    public static ClaimsPrincipal CreatePrincipal(Guid sessionId, Guid ownerId, string username) =>
+    public static ClaimsPrincipal CreatePrincipal(Guid sessionId, Guid ownerId, string email) =>
         new(new ClaimsIdentity(
         [
             new Claim(SessionClaim, sessionId.ToString()),
             new Claim(ClaimTypes.NameIdentifier, ownerId.ToString()),
-            new Claim(ClaimTypes.Name, username)
+            new Claim(ClaimTypes.Name, email)
         ], Scheme));
 
     public Task<string> StoreAsync(AuthenticationTicket ticket) =>
@@ -43,15 +43,15 @@ public sealed class OwnerTicketStore(IServiceScopeFactory scopes, TimeProvider c
             from session in database.OwnerSessions.AsNoTracking()
             join owner in database.Users.AsNoTracking() on session.OwnerId equals owner.Id
             where session.Id == id && owner.RegistrationCompletedAtUtc != null
-            select new { Session = session, owner.UserName }
+            select new { Session = session, owner.Email }
         ).SingleOrDefaultAsync(cancellationToken);
 
-        if (row?.UserName is null || !row.Session.IsActiveAt(clock.GetUtcNow()))
+        if (row?.Email is null || !row.Session.IsActiveAt(clock.GetUtcNow()))
         {
             return null;
         }
 
-        return new AuthenticationTicket(CreatePrincipal(id, row.Session.OwnerId, row.UserName),
+        return new AuthenticationTicket(CreatePrincipal(id, row.Session.OwnerId, row.Email),
             new AuthenticationProperties
             {
                 IssuedUtc = row.Session.CreatedAtUtc,

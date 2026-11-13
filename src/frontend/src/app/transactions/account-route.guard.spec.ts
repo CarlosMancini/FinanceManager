@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Account } from '../accounts/accounts-api.service';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { routes } from '../app.routes';
+import { AuthService } from '../auth/auth.service';
 import { AccountsApiService } from '../accounts/accounts-api.service';
 import { accountRouteDecision, hasActiveAccount, requireAnyAccount } from './account-route.guard';
 
@@ -44,5 +48,26 @@ describe('account route decision', () => {
 
     const result = await TestBed.runInInjectionContext(() => requireAnyAccount({} as never, {} as never));
     expect(result).toBe('accounts-url-tree');
+  });
+});
+
+@Component({ template: '' })
+class NavigationStubComponent {}
+
+describe('MOV-05 authenticated navigation', () => {
+  it.each([
+    [[], '/accounts?onboarding=true'],
+    [[account('active')], '/transactions'],
+    [[account('archived')], '/transactions'],
+  ])('routes the authenticated landing page for the available accounts', async (accounts, expected) => {
+    const testRoutes = routes.map(route => route.component ? { ...route, component: NavigationStubComponent } : route);
+    await TestBed.configureTestingModule({ providers: [
+      provideRouter(testRoutes),
+      { provide: AuthService, useValue: { restore: async () => true } },
+      { provide: AccountsApiService, useValue: { list: async () => accounts } },
+    ] }).compileComponents();
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/');
+    expect(TestBed.inject(Router).url).toBe(expected);
   });
 });

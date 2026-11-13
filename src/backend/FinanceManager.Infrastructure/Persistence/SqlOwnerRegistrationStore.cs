@@ -53,7 +53,61 @@ internal sealed class SqlOwnerRegistrationStore(FinanceManagerDbContext database
 
     private static RegistrationResult Conflict(RegistrationState state) => new(state == RegistrationState.Completed ? RegistrationOutcome.AlreadyRegistered : RegistrationOutcome.RegistrationRequired);
 
-    public Task<RegistrationResult> IssueAuthorizationAsync(Guid verifiedOwnerId, string credentialVersion, byte[] tokenHash, DateTimeOffset verifiedAtUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<RegistrationAuthorization?> FindAuthorizationAsync(byte[] tokenHash, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<RegistrationResult> CompleteAsync(byte[] tokenHash, RegistrationProfile profile, string password, DateTimeOffset nowUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public async Task<RegistrationResult> IssueAuthorizationAsync(Guid verifiedOwnerId, string credentialVersion, byte[] tokenHash, DateTimeOffset verifiedAtUtc, CancellationToken cancellationToken)
+    {
+        database.ChangeTracker.Clear();
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        var owner = await LockOwnerAsync(verifiedOwnerId, cancellationToken);
+        if (owner is null || owner.RegistrationCompletedAtUtc is not null || owner.ConcurrencyStamp != credentialVersion)
+            return new(RegistrationOutcome.AuthorizationRequired);
+        if (clock.GetUtcNow() >= verifiedAtUtc.AddMinutes(10)) return new(RegistrationOutcome.AuthorizationExpired);
+        database.RegistrationAuthorizations.Add(new RegistrationAuthorization(owner.Id, tokenHash, verifiedAtUtc));
+        await database.SaveChangesAsync(cancellationToken);
+        if (clock.GetUtcNow() >= verifiedAtUtc.AddMinutes(10)) return new(RegistrationOutcome.AuthorizationExpired);
+        await transaction.CommitAsync(cancellationToken);
+        return new(RegistrationOutcome.Succeeded);
+    }
+
+    public Task<RegistrationAuthorization?> FindAuthorizationAsync(byte[] tokenHash, CancellationToken cancellationToken) =>
+        (from authorization in database.RegistrationAuthorizations.AsNoTracking()
+         join owner in database.Users.AsNoTracking() on authorization.OwnerId equals owner.Id
+         where authorization.TokenHash == tokenHash && owner.RegistrationCompletedAtUtc == null
+         select authorization).SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<RegistrationResult> CompleteAsync(byte[] tokenHash, RegistrationProfile profile, string password, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+    {
+        var initial = await database.RegistrationAuthorizations.AsNoTracking().SingleOrDefaultAsync(item => item.TokenHash == tokenHash, cancellationToken);
+        if (initial is null || initial.RevokedAtUtc is not null) return new(RegistrationOutcome.AuthorizationRequired);
+        database.ChangeTracker.Clear();
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        var owner = await LockOwnerAsync(initial.OwnerId, cancellationToken);
+        if (owner is null) return new(RegistrationOutcome.AuthorizationRequired);
+        if (owner.RegistrationCompletedAtUtc is not null) return new(RegistrationOutcome.AlreadyCompleted);
+        var authorization = await database.RegistrationAuthorizations.SingleOrDefaultAsync(item => item.TokenHash == tokenHash, cancellationToken);
+        if (authorization is null || authorization.RevokedAtUtc is not null) return new(RegistrationOutcome.AuthorizationRequired);
+        var now = clock.GetUtcNow();
+        if (!authorization.IsValidAt(now)) return new(RegistrationOutcome.AuthorizationExpired);
+        owner.FullName = profile.FullName;
+        owner.Nickname = profile.Nickname;
+        owner.BirthDate = profile.BirthDate;
+        owner.Email = profile.Email;
+        owner.PhoneNumber = profile.PhoneNumber;
+        owner.RegistrationCompletedAtUtc = now;
+        owner.PasswordHash = users.PasswordHasher.HashPassword(owner, password);
+        owner.SecurityStamp = Guid.NewGuid().ToString();
+        var updated = await users.UpdateAsync(owner);
+        if (!updated.Succeeded) return new(RegistrationOutcome.Failed);
+        await database.OwnerSessions.Where(session => session.OwnerId == owner.Id && session.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, now), cancellationToken);
+        await database.RegistrationAuthorizations.Where(item => item.OwnerId == owner.Id && item.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.RevokedAtUtc, now), cancellationToken);
+        database.RegistrationAudits.Add(new RegistrationAudit(owner.Id, RegistrationAuditAction.RegistrationCompleted, now));
+        await database.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return new(RegistrationOutcome.Succeeded);
+    }
+
+    private Task<Owner?> LockOwnerAsync(Guid id, CancellationToken cancellationToken) => database.Users
+        .FromSqlInterpolated($"SELECT * FROM [AspNetUsers] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}")
+        .SingleOrDefaultAsync(cancellationToken);
 }

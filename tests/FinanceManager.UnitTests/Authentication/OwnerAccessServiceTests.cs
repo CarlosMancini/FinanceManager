@@ -62,10 +62,26 @@ public sealed class OwnerAccessServiceTests
         Assert.Equal(login.Session.CreatedAtUtc, sessions.Current!.LastActivityAtUtc);
     }
 
+    [Fact]
+    public async Task ReusesOnlyAnActiveSessionBelongingToTheAuthenticatedOwner()
+    {
+        var service = Service();
+        var token = TestContext.Current.CancellationToken;
+        var first = await service.LoginAsync("titular@example.test", "senha", null, token);
+        var reused = await service.LoginAsync("titular@example.test", "senha", first.Session!.Id, token);
+        Assert.Equal(first.Session.Id, reused.Session!.Id);
+        Assert.Equal("titular@example.test", await service.GetSessionEmailAsync(first.Session.Id, token));
+        await service.LogoutAsync(first.Session.Id, token);
+        var rejected = await service.LoginAsync("titular@example.test", "senha", first.Session.Id, token);
+        Assert.Equal(CredentialOutcome.Rejected, rejected.Outcome);
+        Assert.Null(rejected.Session);
+    }
+
     private OwnerAccessService Service() => new(identity, sessions, clock);
 
     private sealed class Identity : IOwnerIdentity
     {
+        public Task<string?> FindEmailAsync(Guid ownerId, CancellationToken cancellationToken) => Task.FromResult<string?>("titular@example.test");
         public CredentialOutcome Outcome { get; set; } = CredentialOutcome.Accepted;
         public Task<CredentialCheck> CheckAsync(string username, string password, CancellationToken cancellationToken) =>
             Task.FromResult(new CredentialCheck(Outcome, Guid.Parse("235162dc-472f-4239-94bd-157dcf4bc003"), username));

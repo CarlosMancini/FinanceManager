@@ -36,10 +36,12 @@ public static class DependencyInjection
         services.AddScoped<IUserValidator<Owner>, RegistrationUserValidator>();
         services.AddScoped<IPasswordValidator<Owner>, RegistrationPasswordValidator>();
         services.AddScoped<IOwnerIdentity, IdentityOwnerAdapter>();
+        services.AddScoped<ILegacyOwnerIdentity, IdentityOwnerAdapter>();
         services.AddScoped<IOwnerSessionStore, SqlOwnerSessionStore>();
         services.AddScoped<OwnerAccessService>();
         services.AddScoped<IOwnerRegistrationStore, SqlOwnerRegistrationStore>();
         services.AddScoped<OwnerRegistrationService>();
+        services.AddScoped<OwnerRegistrationTransitionService>();
         services.AddSingleton<OwnerTicketStore>();
         services.AddScoped<IFinancialAccountRepository, SqlFinancialAccountRepository>();
         services.AddScoped<FinancialAccountService>();
