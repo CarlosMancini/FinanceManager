@@ -9,6 +9,8 @@ internal sealed class SqlOwnerSessionStore(FinanceManagerDbContext database) : I
 {
     public async Task CreateAsync(OwnerSession session, CancellationToken cancellationToken)
     {
+        if (!await database.Users.AnyAsync(owner => owner.Id == session.OwnerId && owner.RegistrationCompletedAtUtc != null, cancellationToken))
+            throw new InvalidOperationException("Conclua o cadastro antes de entrar.");
         database.OwnerSessions.Add(session);
         await database.SaveChangesAsync(cancellationToken);
     }
@@ -29,6 +31,7 @@ internal sealed class SqlOwnerSessionStore(FinanceManagerDbContext database) : I
     {
         var cutoff = now - OwnerSession.InactivityWindow;
         return database.OwnerSessions.Where(session =>
-            session.Id == id && session.RevokedAtUtc == null && session.LastActivityAtUtc > cutoff);
+            session.Id == id && session.RevokedAtUtc == null && session.LastActivityAtUtc > cutoff &&
+            database.Users.Any(owner => owner.Id == session.OwnerId && owner.RegistrationCompletedAtUtc != null));
     }
 }

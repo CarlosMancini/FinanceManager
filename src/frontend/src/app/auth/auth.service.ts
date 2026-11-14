@@ -8,12 +8,12 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly current = signal<string | null>(null);
-  readonly username = this.current.asReadonly();
+  readonly email = this.current.asReadonly();
 
   async restore(): Promise<boolean> {
     try {
-      const session = await firstValueFrom(this.http.get<{ username: string }>('/api/auth/session'));
-      this.current.set(session.username);
+      const session = await firstValueFrom(this.http.get<{ email: string }>('/api/auth/session'));
+      this.current.set(session.email);
       return true;
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 401) {
@@ -24,9 +24,9 @@ export class AuthService {
     }
   }
 
-  async login(username: string, password: string): Promise<void> {
+  async login(email: string, password: string): Promise<void> {
     await this.refreshCsrf();
-    await firstValueFrom(this.http.post('/api/auth/login', { username, password }));
+    await firstValueFrom(this.http.post('/api/auth/login', { email, password }));
     await this.refreshCsrf();
     await this.restore();
   }
@@ -62,7 +62,7 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   return next(request).pipe(catchError((error: unknown) => {
     if (error instanceof HttpErrorResponse && error.status === 401 &&
-        (request.url.startsWith('/api/accounts') || request.url.startsWith('/api/transactions') || request.url === '/api/auth/logout')) {
+        (request.url.startsWith('/api/accounts') || request.url.startsWith('/api/transactions') || request.url.startsWith('/api/bills') || request.url === '/api/auth/logout')) {
       auth.expire();
     }
     return throwError(() => error);

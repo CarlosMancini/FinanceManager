@@ -139,6 +139,42 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.ToTable("OwnerSessions");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Authentication.RegistrationAuthorization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<DateTimeOffset>("VerifiedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("RegistrationAuthorizations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RegistrationAuthorizations_Expiry", "[ExpiresAtUtc] = DATEADD(minute, 10, [VerifiedAtUtc])");
+
+                            t.HasCheckConstraint("CK_RegistrationAuthorizations_Revocation", "[RevokedAtUtc] IS NULL OR [RevokedAtUtc] >= [VerifiedAtUtc]");
+                        });
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Bills.Bill", b =>
                 {
                     b.Property<Guid>("Id")
@@ -338,16 +374,21 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -355,9 +396,12 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Nickname")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("nvarchar(max)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
@@ -372,8 +416,11 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<byte?>("ProvisioningSlot")
+                    b.Property<byte>("ProvisioningSlot")
                         .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("RegistrationCompletedAtUtc")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -387,9 +434,6 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
@@ -397,10 +441,14 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProvisioningSlot")
                         .IsUnique()
-                        .HasDatabaseName("UX_Owners_ProvisioningSlot")
-                        .HasFilter("[ProvisioningSlot] IS NOT NULL");
+                        .HasDatabaseName("UX_Owners_ProvisioningSlot");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Owners_ProvisioningSlot", "[ProvisioningSlot] = 1");
+
+                            t.HasCheckConstraint("CK_Owners_RegistrationProfile", "[RegistrationCompletedAtUtc] IS NULL OR ([FullName] IS NOT NULL AND LEN(LTRIM(RTRIM([FullName]))) > 0 AND [BirthDate] IS NOT NULL AND [Email] IS NOT NULL AND LEN(LTRIM(RTRIM([Email]))) > 0 AND [NormalizedEmail] IS NOT NULL AND LEN(LTRIM(RTRIM([NormalizedEmail]))) > 0 AND [PhoneNumber] IS NOT NULL AND LEN(LTRIM(RTRIM([PhoneNumber]))) > 0)");
+                        });
                 });
 
             modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.BillAudit", b =>
@@ -494,6 +542,35 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                     b.HasIndex("OwnerId", "TransactionId");
 
                     b.ToTable("FinancialTransactionAudits", (string)null);
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.RegistrationAudit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("RegistrationAudits", t =>
+                        {
+                            t.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted')");
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -655,6 +732,15 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Authentication.RegistrationAuthorization", b =>
+                {
+                    b.HasOne("FinanceManager.Infrastructure.Authentication.Owner", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Bills.Bill", b =>
                 {
                     b.HasOne("FinanceManager.Infrastructure.Authentication.Owner", null)
@@ -716,6 +802,15 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerId", "TransactionId")
                         .HasPrincipalKey("OwnerId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Persistence.RegistrationAudit", b =>
+                {
+                    b.HasOne("FinanceManager.Infrastructure.Authentication.Owner", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

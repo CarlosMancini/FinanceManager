@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using FinanceManager.Api.Http;
 using FinanceManager.Infrastructure.Authentication;
@@ -44,7 +45,19 @@ internal static class OwnerAuthentication
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FinanceManager", "keys");
         var protection = services.AddDataProtection().SetApplicationName("FinanceManager")
             .PersistKeysToFileSystem(new DirectoryInfo(directory));
-        if (OperatingSystem.IsWindows())
+        var certificatePath = builder.Configuration["Security:KeyProtectionCertificate:Path"];
+        if (builder.Configuration.GetValue<bool>("Container:Enabled") && string.IsNullOrWhiteSpace(certificatePath))
+        {
+            throw new InvalidOperationException("Configure o certificado de proteção das chaves.");
+        }
+        if (!string.IsNullOrWhiteSpace(certificatePath))
+        {
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                certificatePath,
+                builder.Configuration["Security:KeyProtectionCertificate:Password"]);
+            protection.ProtectKeysWithCertificate(certificate);
+        }
+        else if (OperatingSystem.IsWindows())
         {
             protection.ProtectKeysWithDpapi();
         }

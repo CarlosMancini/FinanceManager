@@ -18,6 +18,13 @@ internal static class ApiProblems
             ContentTypes = { "application/problem+json" }
         };
 
+    public static ObjectResult Validation(IDictionary<string, string[]> errors)
+    {
+        var problem = Describe(400, "VALIDATION_FAILED", "Confira os dados informados.");
+        problem.Extensions["errors"] = errors;
+        return new ObjectResult(problem) { StatusCode = 400, ContentTypes = { "application/problem+json" } };
+    }
+
     public static Task WriteAsync(HttpContext context, int status, string code, string title)
     {
         context.Response.StatusCode = status;
