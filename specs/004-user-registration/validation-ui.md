@@ -1,7 +1,10 @@
 # Validação de interface · 004
 
-## T051 — parcial
+## T051 — concluída
 
 - Em base sintética vazia e navegador integrado, o cadastro apresentou labels, critérios de senha e erros por campo. Envio vazio levou o foco ao resumo de erros; Tab moveu o foco ao primeiro campo. Em viewport de 360 × 740, o trecho visível do formulário permaneceu legível sem corte horizontal.
 - O foco ao resumo foi implementado nos formulários de cadastro e conclusão; testes Angular cobrem ambos os casos de entrada inválida. O teste de conclusão usa o estado simulado de autorização válida.
-- Ainda falta validar interativamente os demais estados e fluxos de autenticação, incluindo prova legada, expiração, mensagens assíncronas e layout completo em tela estreita. T051 permanece aberta.
+- Na retomada, com banco vazio sintético e navegador integrado em 360 × 740, o envio vazio novamente colocou o foco no resumo; a inspeção com rolagem até o fim confirmou que campos, critérios, botão e retorno ao login permanecem legíveis sem corte horizontal. O retorno abriu o login. A migração completa foi aplicada ao banco isolado para a verificação.
+- Com titular legado sintético e navegador integrado, **Usar acesso antigo** apresentou campos rotulados; credenciais inválidas produziram alerta genérico e limparam a senha. A prova válida abriu a conclusão, que apresentou orientação de prazo e campos rotulados. Envio vazio focou o resumo e mostrou erros por campo; em 360 × 740, a página inteira foi inspecionada por rolagem sem corte horizontal. O caminho **Criar conta → Completar cadastro existente** também abriu a conclusão.
+- Para testar expiração sem esperar dez minutos, os instantes da autorização foram ajustados somente no banco sintético isolado. Ao recarregar, a interface solicitou nova comprovação; prova inválida focou o alerta e prova válida devolveu o formulário. A preservação dos dados não secretos durante expiração no envio, limpeza da senha e nova prova são verificadas por `registration-completion.component.spec.ts`; os limites temporais no servidor estão cobertos pelos testes SQL registrados em `validation.md`. O sucesso completo do fluxo legado já havia sido observado na fase 5.
+- Durante a prova, o botão de login indicava indevidamente “Entrando…”. O login agora mantém seu rótulo e o botão de prova mostra “Comprovando…”, com teste específico para o estado pendente. Suíte Angular: **50/50**; build Angular passou. O servidor temporário e seu processo filho foram encerrados e verificados.

@@ -8,6 +8,26 @@ import { RegistrationService } from './registration.service';
 import { RegistrationTransitionService } from './registration-transition.service';
 
 describe('LoginComponent', () => {
+  it('shows proof progress on the proof button rather than the login button', async () => {
+    let finish!: () => void;
+    const prove = vi.fn().mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+    await TestBed.configureTestingModule({ imports: [LoginComponent], providers: [provideRouter([]),
+      { provide: AuthService, useValue: { login: vi.fn() } },
+      { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'legacyPending' }) } },
+      { provide: RegistrationTransitionService, useValue: { prove } }] }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    await component.ngOnInit();
+    component.showLegacy.set(true); component.legacyUsername = 'legado'; component.legacyPassword = 'senha';
+    const pending = component.proveLegacy();
+    fixture.detectChanges();
+    const buttons = fixture.nativeElement.querySelectorAll('button[type=submit]');
+    expect(buttons[0].textContent.trim()).toBe('Entrar');
+    expect(buttons[1].textContent.trim()).toBe('Comprovando…');
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    finish(); await pending;
+    expect(component.proving()).toBe(false);
+  });
   it('offers legacy proof and navigates only to completion without keeping the old password', async () => {
     const prove = vi.fn().mockResolvedValue(undefined);
     await TestBed.configureTestingModule({ imports: [LoginComponent], providers: [provideRouter([]),

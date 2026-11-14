@@ -61,3 +61,47 @@ T001 concluída.
 - Em execução sequencial, passaram 98 testes unitários .NET, 78 testes de integração SQL Server LocalDB e 49 testes Angular; os builds da API e Angular passaram. `dotnet ef migrations has-pending-model-changes --no-build` confirmou que não há alterações pendentes no modelo.
 - No sandbox, a proteção de dados do ASP.NET falhou ao acessar as chaves locais e causou HTTP 500 na obtenção de CSRF. A suíte de integração completa passou ao executá-la no ambiente normal. O Node 24.22.2 fixado está em `.local-tools/node/node_modules/node/bin/node.exe`.
 - Essas verificações não encerram T050–T052: continuam necessárias a inspeção sistemática de privacidade, a validação interativa dos fluxos de interface e a consolidação da matriz de verificação. T053 e T054 permanecem pendentes.
+
+## Nova retomada · 2026-11-13
+
+- Após ampliar a verificação de privacidade da transição, passaram 98 testes unitários, 78 de integração SQL e 49 testes Angular, além do build Angular. A compilação sequencial do projeto de integração passou sem avisos; os testes .NET e Angular foram executados fora do sandbox por limitações de acesso a pipes/processos. A primeira tentativa das suítes .NET recebeu opções de compilação incompatíveis com o executor e não executou testes; a execução corrigida passou.
+- T050–T054 continuam abertas: a ampliação dos testes não substitui a inspeção sistemática de privacidade nem a validação interativa; a avaliação com cinco participantes permanece pendente por decisão do responsável.
+
+## Consolidação parcial da matriz · 2026-11-13
+
+| Requisitos | Evidências automatizadas e interativas registradas |
+|---|---|
+| FR-001–002 | `login.component.spec.ts`, `registration.component.spec.ts`, `auth.service.spec.ts` e navegação de cadastro/retorno no navegador. |
+| FR-003–007 | `RegistrationProfileTests`, `RegistrationPasswordPolicyTests`, `RegistrationIdentityValidationTests`, `RegistrationContractTests` e `registration-validation.spec.ts`. |
+| FR-008/014 | `RegistrationPersistenceTests`, `RegistrationContractTests` e `OwnerRegistrationServiceTests`: concorrência, falhas, reenvio e validação. |
+| FR-009–013 | `OwnerAccessServiceTests`, `AuthContractTests`, `OwnerSessionPersistenceTests`, `IncompleteOwnerAccessTests`, testes Angular de autenticação e `RegistrationPrivacyTests`. A inspeção de privacidade ainda está em andamento. |
+| FR-015–017 | `OwnerRegistrationTransitionServiceTests`, `RegistrationTransitionContractTests`, `RegistrationTransitionPersistenceTests`, `LegacyRegistrationMigrationTests` e testes Angular de transição. A validação interativa dos estados restantes permanece pendente. |
+| SC-001 | Avaliação humana T053 pendente; as verificações automatizadas não a substituem. |
+
+- Após acrescentar teste de log em mutação financeira, passaram os três testes de privacidade e os 79 testes de integração SQL; a compilação do projeto de integração passou sem avisos e `has-pending-model-changes` confirmou o modelo atualizado. As demais suítes e builds constam da retomada anterior.
+- Revisão arquitetural parcial: os controllers recebem serviços de aplicação; a busca nos controllers não identificou acesso direto a `DbContext` ou repositórios. A revisão final T054 continua condicionada às evidências pendentes, inclusive SC-001.
+
+## T050 · segurança concluída
+
+- `RegistrationPrivacyTests` e os contratos de autenticação, cadastro e transição passaram em SQL Server LocalDB: 27 testes. A compilação do projeto de integração passou sem avisos. A cobertura inclui rejeição de CSRF nas 16 rotas de mutação e inspeção de logs e respostas nos fluxos sintéticos; revisão de HTTPS, cookies, auditoria e consulta de login está detalhada em `validation-security.md`.
+- T050 concluída. T051–T054 mantêm seu estado anterior; SC-001 continua pendente.
+
+## T051 · interface concluída
+
+- Validados no navegador integrado os caminhos legados, erro e foco, autorização expirada, nova prova e formulário completo em tela estreita; a preservação dos dados na expiração é coberta por teste Angular. Corrigido o texto de progresso da comprovação. Suíte Angular: 50 testes; build Angular passou. Detalhes em `validation-ui.md`.
+- T051 concluída. T052–T054 permanecem abertas; SC-001 depende da avaliação humana T053.
+
+## T052 · suítes e matriz consolidadas
+
+- Em 2026-11-13, com SQL Server LocalDB e Node 24.22.2, `dotnet build FinanceManager.slnx --no-restore -m:1 /nodeReuse:false /p:UseSharedCompilation=false` passou sem avisos; `dotnet test --project tests/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build` passou com **98/98**; o comando equivalente para `FinanceManager.IntegrationTests` passou com **80/80**. `dotnet ef migrations has-pending-model-changes --project src/backend/FinanceManager.Infrastructure --startup-project src/backend/FinanceManager.Api --no-build` não encontrou mudanças pendentes.
+- `npm --prefix src/frontend test` passou com **50/50** e `npm --prefix src/frontend run build` passou, executados com o Node fixado em `.local-tools/node-v24.22.2-win-x64`. As suítes incluem as regressões de autenticação/sessão, contas, movimentações, obrigações e baixas das features 001–003; seus contratos, persistência e migrações estão nos respectivos diretórios dos testes de integração.
+- Matriz do plano: FR-001–007 e SC-002 estão cobertos pelos testes de perfil, senha, identidade, contratos e formulário; FR-008/014 e SC-004 pelos testes de cadastro concorrente, reenvio e rollback; FR-009–013 e SC-003/006 pelos testes de autenticação, sessão, navegação, privacidade e interface; FR-015–016 e SC-004/005 pelos testes de migração legada, comparação de registros, concorrência e rollback; FR-017 e SC-007 pelos testes de prazo absoluto, atraso, expiração e nova prova. Os cenários interativos e as limitações estão detalhados nas seções anteriores e em `validation-ui.md` e `validation-security.md`.
+- `RegistrationMigrationTests` verifica migração de banco vazio e rejeição de múltiplos titulares legados; `LegacyRegistrationMigrationTests` aplica a migração sobre histórico sintético e compara registros e vínculos antes/depois. A aplicação integral da migração em base sintética vazia e as verificações de navegador estão registradas nas fases 5 e 6 acima. Nenhum teste foi removido ou enfraquecido nesta validação.
+- T052 concluída. A avaliação humana SC-001/T053 continua pendente e não foi substituída pelas suítes; T054 depende dessa evidência final.
+
+## T054 · revisão técnica parcial
+
+- **Arquitetura e constituição:** `FinanceManager.Domain` não declara referências de projeto e a busca em seu código não encontrou imports de ASP.NET Core, EF Core ou infraestrutura; `FinanceManager.Application` referencia o domínio. Os controllers recebem serviços de aplicação e a busca em seus arquivos não encontrou `DbContext` nem repositórios. As verificações de SQL Server, autenticação, CSRF, cookies e loopback estão nas evidências T050 e T052. A revisão é limitada à feature 004 e aos pontos de integração examinados.
+- **Regras e casos de uso:** `RegistrationProfileTests` cobre normalização, obrigatoriedade, nascimento e limites de telefone; `RegistrationPasswordPolicyTests` cobre categorias, Unicode e limites; `RegistrationAuthorizationTests` cobre prazo e revogação; `OwnerSessionTests` cobre inatividade; `OwnerRegistrationServiceTests`, `OwnerRegistrationTransitionServiceTests` e `OwnerAccessServiceTests` cobrem os casos de uso e rejeições. Contratos HTTP, transações SQL, migrações e interface complementam esses testes conforme a matriz T052.
+- **Convenções e diff:** os arquivos e identificadores da alteração revisada usam inglês; as mensagens de autenticação e erros examinadas estão em português, com códigos técnicos estáveis. A alteração funcional pendente restringe-se ao indicador de progresso da prova legada e possui teste Angular; o restante do diff contém testes e evidências da 004. `git diff --check` passou, com avisos de conversão de fim de linha. O diretório não rastreado `sites/` preexistente não foi incluído na revisão da feature.
+- **Aceite pendente:** T001–T052 estão marcadas como concluídas; T053 e SC-001 permanecem pendentes por falta dos cinco participantes, conforme `validation-usability.md`. A tarefa T054 exige todas as evidências, inclusive SC-001: a revisão técnica acima não encerra T054 nem autoriza declarar a feature concluída. Após T053, revisar seus resultados e completar a verificação de aceite antes de marcar T054.
