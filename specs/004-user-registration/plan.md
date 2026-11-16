@@ -105,7 +105,7 @@ Executar [quickstart.md](quickstart.md) após implementação; registrar evidên
 
 - Remover índice/check de ProvisioningSlot em nova migração, sem editar migrações anteriores nem IDs/FKs. Manter coluna histórica sem unicidade.
 - Preservar `nvarchar(max)` para e-mail. Acrescentar coluna calculada persistida `NormalizedEmailHash` (SHA2_256 dos bytes SQL de NormalizedEmail) com índice único filtrado para e-mails não nulos. Colisão de hash também rejeita a gravação, sem permitir duplicação. Comparação/login continuam pelo texto normalizado com collation binária.
-- Estado público consulta existência de legado por `Any`, sem assumir linha única. Cadastro sempre disponível; legado não impede cadastro independente.
+- Estado público consulta existência de legado por `Any`, sem assumir linha única. `/register` não consulta esse estado: apresenta formulário imediatamente, com link opcional para conclusão legada. Cadastro sempre disponível; legado não impede cadastro independente. Apenas o envio executa a pesquisa de duplicidade de e-mail.
 - Normalizar telefone de exatamente 11 dígitos e máscara completa. Exigir `confirmPassword` no DTO, interface e serviços de cadastro/conclusão, sem persistência.
 - Mapear duplicidade para `409 EMAIL_ALREADY_REGISTERED` tanto no cadastro quanto na conclusão legada, inclusive violação concorrente do índice. Preservar transação, revogação e prazo legado.
 - Validar dois usuários reais autenticados: listas, leitura por ID e mutações de contas, movimentações, obrigações e baixas não atravessam titularidade.

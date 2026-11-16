@@ -208,3 +208,8 @@ Solicitação e emenda 2.0.0 aprovadas pelo responsável; esta fase substitui as
 - [X] T057 Implementar cadastro sempre disponível, validações de confirmação/telefone e mensagem de e-mail duplicado; preservar fluxo legado. (FR-003/005–008/018)
 - [X] T058 Criar migração incremental para remover singleton e garantir unicidade de e-mail normalizado; validar atualização, concorrência, rollback e isolamento com SQL Server real. (FR-008/012/016)
 - [X] T059 Executar suítes xUnit/SQL/Angular, builds e has-pending-model-changes; revisar rastreabilidade e registrar evidências reais desta revisão em validation.md. (SC-002–007)
+
+## Retomada da revisão — formulário imediato e versão instalada
+
+- [X] T060 Remover consulta de disponibilidade ao abrir `/register` e após erro de envio; apresentar imediatamente o formulário e manter link legado opcional. Validar ausência de consulta inicial e erro de e-mail somente após envio. (FR-002/008/014)
+- [X] T061 Validar logout/login alternados de usuários diferentes no mesmo cliente e conferir que a instalação local usa a imagem atualizada; atualizar com backup, preservando banco e chaves, e registrar evidências. (FR-009/012/016)

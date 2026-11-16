@@ -6,6 +6,17 @@ import { RegistrationService } from './registration.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
 describe('RegistrationComponent', () => {
+  it('renders immediately without querying whether any account exists', async () => {
+    const state = vi.fn(() => new Promise(() => {}));
+    const register = vi.fn();
+    await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
+      { provide: RegistrationService, useValue: { state, register } }] }).compileComponents();
+    const fixture = TestBed.createComponent(RegistrationComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-registration-form')).toBeTruthy();
+    expect(state).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
+  });
   it('keeps registration available with existing users and reports duplicate email on submission', async () => {
     const register = vi.fn().mockRejectedValue(new HttpErrorResponse({ status: 409, error: { code: 'EMAIL_ALREADY_REGISTERED', title: 'Este e-mail já está registrado.' } }));
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
@@ -41,9 +52,9 @@ describe('RegistrationComponent', () => {
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]),
       { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'legacyPending' }) } }] }).compileComponents();
     const fixture = TestBed.createComponent(RegistrationComponent);
-    await fixture.componentInstance.ngOnInit(); fixture.detectChanges();
+    fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Completar cadastro existente');
-    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe('/register/complete');
+    expect(fixture.nativeElement.querySelector('a[href="/register/complete"]')).toBeTruthy();
   });
   it('offers a return link to login', async () => {
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]), { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'empty' }), register: vi.fn() } }] }).compileComponents();
@@ -59,7 +70,6 @@ describe('RegistrationComponent', () => {
     const register = vi.fn().mockRejectedValue({});
     await TestBed.configureTestingModule({ imports: [RegistrationComponent], providers: [provideRouter([]), { provide: RegistrationService, useValue: { state: vi.fn().mockResolvedValue({ state: 'empty' }), register } }] }).compileComponents();
     const fixture = TestBed.createComponent(RegistrationComponent);
-    await fixture.componentInstance.ngOnInit();
     const component = fixture.componentInstance;
     component.data = { fullName: 'Pessoa', nickname: '', birthDate: '1990-01-01', email: 'a@b', phoneNumber: '11999999999', password: 'SenhaValida!123', confirmPassword: 'SenhaValida!123' };
     await component.submit();

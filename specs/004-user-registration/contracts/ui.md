@@ -5,7 +5,7 @@ Rotas são decisões deste plano para implementar FR-001–017, sem novas funç�
 | Rota/estado | Comportamento |
 |---|---|
 | `/login`, sem sessão | E-mail, senha oculta, Entrar e Criar conta. Enquanto há legado incompleto, oferecer **Usar acesso antigo** com campos de nome de acesso/senha para a prova, na própria tela. |
-| `/register`, qualquer instalação | Formulário dedicado com nome, apelido opcional, nascimento, e-mail, telefone, senha e confirmação de senha, regras visíveis e opção Voltar ao login. |
+| `/register`, qualquer instalação | Apresentar imediatamente o formulário com nome, apelido opcional, nascimento, e-mail, telefone, senha e confirmação, regras visíveis e opção Voltar ao login, sem consulta de contas existentes na abertura. Pesquisar duplicidade de e-mail somente no envio válido. |
 | `/register`, legado pendente | Orientar **Completar cadastro existente** e pedir credenciais antigas; manter formulário de novo usuário disponível, sem mostrar dados financeiros/pessoais existentes. |
 | `/register`, outros cadastros concluídos | Exibir formulário de novo usuário; no envio de e-mail duplicado, informar o conflito e manter dados corrigíveis. |
 | `/register/complete`, autorização válida | Mesmo formulário de dados obrigatórios, exibindo orientação sobre o prazo; sem acesso financeiro ou dispensa de regras. |

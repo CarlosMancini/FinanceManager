@@ -79,6 +79,34 @@ public sealed class MultipleUserRegistrationTests
     }
 
     [Fact]
+    public async Task SameBrowserCanLogoutAndLoginWithDifferentUsers()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await RegistrationScenario.EmptyAsync();
+        await using var factory = new FinanceManagerApiFactory(scenario.Database.ConnectionString);
+        using var client = factory.CreateHttpsClient();
+        var emails = new[] { "primeiro@example.test", "segundo@example.test" };
+        var csrf = await AuthTestClient.GetCsrfAsync(client, token);
+        foreach (var email in emails)
+        {
+            using var created = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, Profile(email), token);
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        }
+        foreach (var email in new[] { emails[0], emails[1], emails[0] })
+        {
+            using var login = await AuthTestClient.LoginAsync(client, token, Password, email);
+            Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
+            using var session = JsonDocument.Parse(await client.GetStringAsync("/api/auth/session", token));
+            Assert.Equal(email, session.RootElement.GetProperty("email").GetString());
+            csrf = await AuthTestClient.GetCsrfAsync(client, token);
+            using var logout = await AuthTestClient.PostAsync(client, "/api/auth/logout", csrf, null, token);
+            Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
+            using var denied = await client.GetAsync("/api/auth/session", token);
+            Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task TwoAuthenticatedUsersCannotReadOrModifyEachOthersFinancialData()
     {
         var token = TestContext.Current.CancellationToken;

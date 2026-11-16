@@ -1,5 +1,16 @@
 # Evidências de validação · 004
 
+## Retomada de 2026-11-16 · T060–T061 · versão instalada
+
+- Reprodução visual em `https://localhost:7043/register`: o contêiner da instalação piloto ainda servia o bundle `main-UVBGMO6H.js` da imagem anterior `d7e444b5f26c`, criada antes da revisão, e exibia “Já existe um cadastro. Entre para continuar.”. A alteração do código e seu commit não tinham reconstruído/atualizado essa imagem instalada.
+- `/register` agora renderiza o formulário imediatamente e não consulta `registration-state`, nem na abertura nem após erro de envio. O link de conclusão legada é opcional e independente. A pesquisa de e-mail duplicado permanece exclusivamente no serviço acionado pelo envio válido. Plano e contrato UI atualizados para explicitar essa decisão; não foi necessário mudar os requisitos aprovados.
+- Teste de regressão Angular com consulta de estado que nunca responde falhou antes da correção, por não renderizar o formulário, e passou após a correção. A suíte Angular completa passou: **55/55** em 11 arquivos, com Node 24.22.2.
+- Novo teste SQL `SameBrowserCanLogoutAndLoginWithDifferentUsers`: cadastra dois usuários e alterna login/consulta da identidade/logout/recusa de sessão encerrada no mesmo HttpClient com cookies, na sequência primeiro → segundo → primeiro. Passou. Os **9/9 testes** de `MultipleUserRegistrationTests` passaram em bases sintéticas LocalDB, incluindo duplicidade, validações, transição e isolamento financeiro.
+- Imagem local `financemanager:registration-004-local` construída pelo Dockerfile versionado: compilação Angular, publicação .NET Release e bundle de migrações concluídos. Atualização local sem publicação remota: backup COPY_ONLY com CHECKSUM, RESTORE VERIFYONLY, cópia local protegida e metadados SHA-256 antes da migração. Backup preservado em `AppData/Local/FinanceManager/backups/financemanager-registration-20261116-200544-553717b8dc124386a87fc206233183ec.bak` no perfil do usuário.
+- Instalação `financemanager-piloto` atualizada com os volumes existentes de banco e chaves; migração terminou com exit code 0, aplicação reiniciada e `.env` local passou a referenciar a imagem construída. Nenhuma senha, perfil ou registro financeiro real foi inserido/alterado nos testes de interface.
+- Verificação no navegador após atualizar: Login → Criar conta apresentou formulário completo com nome, apelido, nascimento, e-mail, telefone, senha e confirmação, sem bloqueio por cadastro existente. Captura visual conferida. O preenchimento sintético do telefone foi descartado ao recarregar. Testes de criação e alternância de usuários foram executados nos bancos isolados, sem criar contas de teste na instalação pessoal.
+- `git diff --check` passou. Checklist requirements.md preservada: 16/16; nenhum hook configurado. T060 e T061 concluídas. T053/T054 e SC-001 continuam pendentes.
+
 ## Revisão autorizada de 2026-11-16 · T055–T059
 
 As evidências abaixo substituem as conclusões históricas sobre singleton e telefone nas fases anteriores. A constituição foi alterada de 1.3.0 para 2.0.0 por autorização explícita do responsável: múltiplos titulares locais, um login por e-mail normalizado e isolamento financeiro. Spec, plano, modelo, pesquisa, contratos e quickstart foram atualizados sem alterar os marcadores da checklist (16/16).
