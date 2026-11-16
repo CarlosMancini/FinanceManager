@@ -33,18 +33,11 @@ public sealed class RegistrationProfile
             throw new ArgumentException("Informe um e-mail válido.", nameof(email));
         if (string.IsNullOrWhiteSpace(phoneNumber)) throw new ArgumentException("Informe um telefone válido.", nameof(phoneNumber));
         var phone = phoneNumber.Trim();
-        var digits = new System.Text.StringBuilder();
-        for (var i = 0; i < phone.Length; i++)
-        {
-            var c = phone[i];
-            if (c is >= '0' and <= '9') digits.Append(c);
-            else if (c == '+' && i == 0) { }
-            else if (c is ' ' or '(' or ')' or '-') { }
-            else throw new ArgumentException("Informe um telefone válido.", nameof(phoneNumber));
-        }
-        if (digits.Length is < 10 or > 15) throw new ArgumentException("Informe um telefone válido.", nameof(phoneNumber));
+        if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"\A(?:[0-9]{11}|\([0-9]{2}\) [0-9]{5}-[0-9]{4})\z"))
+            throw new ArgumentException("Informe um telefone com DDD e 11 dígitos.", nameof(phoneNumber));
+        var digits = new string(phone.Where(c => c is >= '0' and <= '9').ToArray());
         var trimmedNickname = nickname?.Trim();
         return new(name, string.IsNullOrEmpty(trimmedNickname) ? null : trimmedNickname, birthDate.Value,
-            normalizedEmail, normalizedEmail.ToUpperInvariant(), (phone.StartsWith('+') ? "+" : "") + digits);
+            normalizedEmail, normalizedEmail.ToUpperInvariant(), digits);
     }
 }

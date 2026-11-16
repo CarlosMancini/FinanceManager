@@ -62,10 +62,12 @@ public sealed class FinanceManagerDbContext(DbContextOptions<FinanceManagerDbCon
         {
             owner.ToTable(table =>
             {
-                table.HasCheckConstraint("CK_Owners_ProvisioningSlot", "[ProvisioningSlot] = 1");
                 table.HasCheckConstraint("CK_Owners_RegistrationProfile", "[RegistrationCompletedAtUtc] IS NULL OR ([FullName] IS NOT NULL AND LEN(LTRIM(RTRIM([FullName]))) > 0 AND [BirthDate] IS NOT NULL AND [Email] IS NOT NULL AND LEN(LTRIM(RTRIM([Email]))) > 0 AND [NormalizedEmail] IS NOT NULL AND LEN(LTRIM(RTRIM([NormalizedEmail]))) > 0 AND [PhoneNumber] IS NOT NULL AND LEN(LTRIM(RTRIM([PhoneNumber]))) > 0)");
             });
-            owner.HasIndex(row => row.ProvisioningSlot).IsUnique().HasDatabaseName(IdentityOwnerAdapter.ProvisioningIndex);
+            owner.Property<byte[]>("NormalizedEmailHash").HasColumnType("binary(32)")
+                .HasComputedColumnSql("CONVERT(binary(32), HASHBYTES('SHA2_256', [NormalizedEmail]))", stored: true);
+            owner.HasIndex("NormalizedEmailHash").IsUnique().HasDatabaseName("UX_Owners_NormalizedEmailHash")
+                .HasFilter("[NormalizedEmail] IS NOT NULL");
             var emailProperty = owner.Property(row => row.Email).HasColumnType("nvarchar(max)");
             emailProperty.Metadata.SetMaxLength(null);
             var normalizedEmailProperty = owner.Property(row => row.NormalizedEmail).HasColumnType("nvarchar(max)").UseCollation("Latin1_General_100_BIN2");

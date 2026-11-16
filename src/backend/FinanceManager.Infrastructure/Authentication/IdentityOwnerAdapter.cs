@@ -6,8 +6,6 @@ namespace FinanceManager.Infrastructure.Authentication;
 
 internal sealed class IdentityOwnerAdapter(UserManager<Owner> users, SignInManager<Owner> signIn) : IOwnerIdentity, ILegacyOwnerIdentity
 {
-    internal const string ProvisioningIndex = "UX_Owners_ProvisioningSlot";
-
     public async Task<CredentialCheck> CheckAsync(string email, string password, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

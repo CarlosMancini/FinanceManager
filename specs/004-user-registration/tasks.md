@@ -198,3 +198,13 @@ Paralelismo é oportunidade de execução futura, não autorização para inicia
 ## Notes
 
 São 54 tarefas: 2 setup, 12 fundação, 11 US1, 10 US2, 14 US3 e 5 transversais. Nenhuma representa implementação ou validação já concluída. Relatórios `validation*.md` são evidências a criar durante a execução; não são gerados nem preenchidos ficticiamente por este comando. Nenhum hook de extensão configurado foi encontrado na geração.
+
+## Phase 7: Revisão autorizada de 2026-11-16 — múltiplos usuários
+
+Solicitação e emenda 2.0.0 aprovadas pelo responsável; esta fase substitui as regras históricas de singleton/telefone das tarefas anteriores. T053 e T054 continuam pendentes e não integram a conclusão automática desta revisão.
+
+- [X] T055 Atualizar constituição e artefatos 004 com múltiplos titulares, e-mail único, confirmação e telefone de 11 dígitos. (FR-003/005–008/012/018)
+- [X] T056 Escrever/ajustar testes xUnit, SQL e Angular para telefone, confirmação, cadastros com e-mails iguais/distintos, transição e isolamento financeiro. Confirmar falhas antes da implementação. (SC-002–006)
+- [X] T057 Implementar cadastro sempre disponível, validações de confirmação/telefone e mensagem de e-mail duplicado; preservar fluxo legado. (FR-003/005–008/018)
+- [X] T058 Criar migração incremental para remover singleton e garantir unicidade de e-mail normalizado; validar atualização, concorrência, rollback e isolamento com SQL Server real. (FR-008/012/016)
+- [X] T059 Executar suítes xUnit/SQL/Angular, builds e has-pending-model-changes; revisar rastreabilidade e registrar evidências reais desta revisão em validation.md. (SC-002–007)

@@ -11,14 +11,14 @@ internal sealed class SqlOwnerRegistrationStore(FinanceManagerDbContext database
 {
     public async Task<RegistrationState> GetStateAsync(CancellationToken cancellationToken)
     {
-        var owner = await database.Users.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        return owner is null ? RegistrationState.Empty : owner.RegistrationCompletedAtUtc is null ? RegistrationState.LegacyPending : RegistrationState.Completed;
+        if (await database.Users.AnyAsync(owner => owner.RegistrationCompletedAtUtc == null, cancellationToken))
+            return RegistrationState.LegacyPending;
+        return await database.Users.AnyAsync(cancellationToken) ? RegistrationState.Completed : RegistrationState.Empty;
     }
 
     public async Task<RegistrationResult> RegisterAsync(RegistrationProfile profile, string password, CancellationToken cancellationToken)
     {
-        var state = await GetStateAsync(cancellationToken);
-        if (state != RegistrationState.Empty) return Conflict(state);
+        if (await EmailExistsAsync(profile.NormalizedEmail, null, cancellationToken)) return new(RegistrationOutcome.AlreadyRegistered);
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -32,26 +32,28 @@ internal sealed class SqlOwnerRegistrationStore(FinanceManagerDbContext database
             {
                 await transaction.RollbackAsync(cancellationToken);
                 database.ChangeTracker.Clear();
-                state = await GetStateAsync(cancellationToken);
-                return state == RegistrationState.Empty ? new(RegistrationOutcome.InvalidProfile) : Conflict(state);
+                return await EmailExistsAsync(profile.NormalizedEmail, null, cancellationToken)
+                    ? new(RegistrationOutcome.AlreadyRegistered) : new(RegistrationOutcome.InvalidProfile);
             }
             database.Set<RegistrationAudit>().Add(new(owner.Id, RegistrationAuditAction.Registered, now));
             await database.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return new(RegistrationOutcome.Succeeded);
         }
-        catch (DbUpdateException error) when (error.InnerException is SqlException { Number: 2601 or 2627 } sql &&
-            (sql.Message.Contains(IdentityOwnerAdapter.ProvisioningIndex, StringComparison.Ordinal) || sql.Message.Contains("UserNameIndex", StringComparison.Ordinal)))
+        catch (DbUpdateException error) when (IsDuplicateEmail(error))
         {
             await transaction.RollbackAsync(cancellationToken);
             database.ChangeTracker.Clear();
-            state = await GetStateAsync(cancellationToken);
-            if (state == RegistrationState.Empty) throw;
-            return Conflict(state);
+            return new(RegistrationOutcome.AlreadyRegistered);
         }
     }
 
-    private static RegistrationResult Conflict(RegistrationState state) => new(state == RegistrationState.Completed ? RegistrationOutcome.AlreadyRegistered : RegistrationOutcome.RegistrationRequired);
+    private Task<bool> EmailExistsAsync(string normalizedEmail, Guid? exceptOwnerId, CancellationToken cancellationToken) =>
+        database.Users.AnyAsync(owner => owner.NormalizedEmail == normalizedEmail && owner.Id != exceptOwnerId, cancellationToken);
+
+    private static bool IsDuplicateEmail(DbUpdateException error) =>
+        error.InnerException is SqlException { Number: 2601 or 2627 } sql &&
+        sql.Message.Contains("UX_Owners_NormalizedEmailHash", StringComparison.Ordinal);
 
     public async Task<RegistrationResult> IssueAuthorizationAsync(Guid verifiedOwnerId, string credentialVersion, byte[] tokenHash, DateTimeOffset verifiedAtUtc, CancellationToken cancellationToken)
     {
@@ -80,31 +82,41 @@ internal sealed class SqlOwnerRegistrationStore(FinanceManagerDbContext database
         if (initial is null || initial.RevokedAtUtc is not null) return new(RegistrationOutcome.AuthorizationRequired);
         database.ChangeTracker.Clear();
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
-        var owner = await LockOwnerAsync(initial.OwnerId, cancellationToken);
-        if (owner is null) return new(RegistrationOutcome.AuthorizationRequired);
-        if (owner.RegistrationCompletedAtUtc is not null) return new(RegistrationOutcome.AlreadyCompleted);
-        var authorization = await database.RegistrationAuthorizations.SingleOrDefaultAsync(item => item.TokenHash == tokenHash, cancellationToken);
-        if (authorization is null || authorization.RevokedAtUtc is not null) return new(RegistrationOutcome.AuthorizationRequired);
-        var now = clock.GetUtcNow();
-        if (!authorization.IsValidAt(now)) return new(RegistrationOutcome.AuthorizationExpired);
-        owner.FullName = profile.FullName;
-        owner.Nickname = profile.Nickname;
-        owner.BirthDate = profile.BirthDate;
-        owner.Email = profile.Email;
-        owner.PhoneNumber = profile.PhoneNumber;
-        owner.RegistrationCompletedAtUtc = now;
-        owner.PasswordHash = users.PasswordHasher.HashPassword(owner, password);
-        owner.SecurityStamp = Guid.NewGuid().ToString();
-        var updated = await users.UpdateAsync(owner);
-        if (!updated.Succeeded) return new(RegistrationOutcome.Failed);
-        await database.OwnerSessions.Where(session => session.OwnerId == owner.Id && session.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, now), cancellationToken);
-        await database.RegistrationAuthorizations.Where(item => item.OwnerId == owner.Id && item.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.RevokedAtUtc, now), cancellationToken);
-        database.RegistrationAudits.Add(new RegistrationAudit(owner.Id, RegistrationAuditAction.RegistrationCompleted, now));
-        await database.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return new(RegistrationOutcome.Succeeded);
+        try
+        {
+            var owner = await LockOwnerAsync(initial.OwnerId, cancellationToken);
+            if (owner is null) return new(RegistrationOutcome.AuthorizationRequired);
+            if (owner.RegistrationCompletedAtUtc is not null) return new(RegistrationOutcome.AlreadyCompleted);
+            if (await EmailExistsAsync(profile.NormalizedEmail, owner.Id, cancellationToken)) return new(RegistrationOutcome.AlreadyRegistered);
+            var authorization = await database.RegistrationAuthorizations.SingleOrDefaultAsync(item => item.TokenHash == tokenHash, cancellationToken);
+            if (authorization is null || authorization.RevokedAtUtc is not null) return new(RegistrationOutcome.AuthorizationRequired);
+            var now = clock.GetUtcNow();
+            if (!authorization.IsValidAt(now)) return new(RegistrationOutcome.AuthorizationExpired);
+            owner.FullName = profile.FullName;
+            owner.Nickname = profile.Nickname;
+            owner.BirthDate = profile.BirthDate;
+            owner.Email = profile.Email;
+            owner.PhoneNumber = profile.PhoneNumber;
+            owner.RegistrationCompletedAtUtc = now;
+            owner.PasswordHash = users.PasswordHasher.HashPassword(owner, password);
+            owner.SecurityStamp = Guid.NewGuid().ToString();
+            var updated = await users.UpdateAsync(owner);
+            if (!updated.Succeeded) return new(RegistrationOutcome.Failed);
+            await database.OwnerSessions.Where(session => session.OwnerId == owner.Id && session.RevokedAtUtc == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, now), cancellationToken);
+            await database.RegistrationAuthorizations.Where(item => item.OwnerId == owner.Id && item.RevokedAtUtc == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.RevokedAtUtc, now), cancellationToken);
+            database.RegistrationAudits.Add(new RegistrationAudit(owner.Id, RegistrationAuditAction.RegistrationCompleted, now));
+            await database.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new(RegistrationOutcome.Succeeded);
+        }
+        catch (DbUpdateException error) when (IsDuplicateEmail(error))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            database.ChangeTracker.Clear();
+            return new(RegistrationOutcome.AlreadyRegistered);
+        }
     }
 
     private Task<Owner?> LockOwnerAsync(Guid id, CancellationToken cancellationToken) => database.Users

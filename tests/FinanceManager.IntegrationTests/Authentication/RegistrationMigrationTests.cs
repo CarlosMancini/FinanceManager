@@ -11,13 +11,36 @@ namespace FinanceManager.IntegrationTests.Authentication;
 public sealed class RegistrationMigrationTests
 {
     [Fact]
+    public async Task UpgradeFromPreviousRegistrationPreservesIdentityAndRollbackNeverDeletesUsers()
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await RegistrationScenario.CompletedAsync(token);
+        await using var db = scenario.Database.CreateContext();
+        var original = await db.Users.AsNoTracking().SingleAsync(token);
+        var migrator = db.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261113002124_AddOwnerRegistration", token);
+        await migrator.MigrateAsync(null, token);
+        var restored = await db.Users.AsNoTracking().SingleAsync(token);
+        Assert.Equal(original.Id, restored.Id);
+        Assert.Equal(original.PasswordHash, restored.PasswordHash);
+        Assert.Equal(original.Email, restored.Email);
+        Assert.Equal(original.PhoneNumber, restored.PhoneNumber);
+        var secondId = Guid.NewGuid();
+        await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO [AspNetUsers] ([Id], [ProvisioningSlot], [EmailConfirmed], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEnabled], [AccessFailedCount]) VALUES ({secondId}, 1, 0, 0, 0, 0, 0)", token);
+        await Assert.ThrowsAsync<SqlException>(() => migrator.MigrateAsync("20261113002124_AddOwnerRegistration", token));
+        Assert.Equal(2, await db.Users.CountAsync(token));
+        Assert.Equal(original.PasswordHash, (await db.Users.AsNoTracking().SingleAsync(owner => owner.Id == original.Id, token)).PasswordHash);
+    }
+
+    [Fact]
     public async Task NewDatabaseEnforcesRegistrationConstraints()
     {
         var token = TestContext.Current.CancellationToken;
         await using var scenario = await RegistrationScenario.CompletedAsync(token);
         await using var db = scenario.Database.CreateContext();
         var script = db.Database.GenerateCreateScript();
-        Assert.Contains("CK_Owners_ProvisioningSlot", script);
+        Assert.DoesNotContain("CK_Owners_ProvisioningSlot", script);
+        Assert.Contains("UX_Owners_NormalizedEmailHash", script);
         Assert.Contains("CK_Owners_RegistrationProfile", script);
         Assert.Contains("CK_RegistrationAuthorizations_Expiry", script);
         Assert.Contains("CK_RegistrationAuthorizations_Revocation", script);
@@ -26,8 +49,8 @@ public sealed class RegistrationMigrationTests
         Assert.True(migrationScript.IndexOf("DROP INDEX [EmailIndex]", StringComparison.Ordinal) < migrationScript.IndexOf("ALTER COLUMN [NormalizedEmail]", StringComparison.Ordinal));
         var owner = await db.Users.SingleAsync(token);
         var another = Guid.NewGuid();
-        await Assert.ThrowsAsync<SqlException>(async () => await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO [AspNetUsers] ([Id], [ProvisioningSlot], [EmailConfirmed], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEnabled], [AccessFailedCount]) VALUES ({another}, 1, 0, 0, 0, 0, 0)", token));
-        await Assert.ThrowsAsync<SqlException>(async () => await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [AspNetUsers] SET [ProvisioningSlot] = 2 WHERE [Id] = {owner.Id}", token));
+        await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO [AspNetUsers] ([Id], [ProvisioningSlot], [EmailConfirmed], [PhoneNumberConfirmed], [TwoFactorEnabled], [LockoutEnabled], [AccessFailedCount]) VALUES ({another}, 1, 0, 0, 0, 0, 0)", token);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [AspNetUsers] SET [ProvisioningSlot] = 2 WHERE [Id] = {owner.Id}", token);
         await Assert.ThrowsAsync<SqlException>(async () => await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [AspNetUsers] SET [FullName] = NULL WHERE [Id] = {owner.Id}", token));
     }
 

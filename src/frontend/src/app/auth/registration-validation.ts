@@ -1,4 +1,12 @@
-export interface RegistrationData { fullName: string; nickname: string; birthDate: string; email: string; phoneNumber: string; password: string; }
+export interface RegistrationData { fullName: string; nickname: string; birthDate: string; email: string; phoneNumber: string; password: string; confirmPassword: string; }
+
+export function formatPhone(input: string): string {
+  const digits = input.replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
 
 export function passwordCriteria(password: string) {
   const chars = Array.from(password);
@@ -14,9 +22,10 @@ export function validateRegistration(data: RegistrationData, today: string): Rec
   if (!match || !date || date.toISOString().slice(0, 10) !== data.birthDate || data.birthDate > today) errors['birthDate'] = 'Informe uma data de nascimento válida.';
   if (!/^[^@\s]+@[^@\s]+$/u.test(data.email.trim())) errors['email'] = 'Informe um e-mail válido.';
   const phone = data.phoneNumber.trim();
-  const digits = phone.replace(/[ ()+\-]/g, '');
-  if (!/^\+?[0-9 ()-]+$/.test(phone) || digits.length < 10 || digits.length > 15) errors['phoneNumber'] = 'Informe um telefone válido.';
+  if (!/^(?:[0-9]{11}|\([0-9]{2}\) [0-9]{5}-[0-9]{4})$/.test(phone)) errors['phoneNumber'] = 'Informe um telefone com DDD e 11 dígitos, como (61) 99843-3486.';
   if (!Object.values(passwordCriteria(data.password)).every(Boolean)) errors['password'] = 'Confira os critérios da senha.';
+  if (!Object.values(passwordCriteria(data.confirmPassword)).every(Boolean) || data.password !== data.confirmPassword)
+    errors['confirmPassword'] = 'Confirme a senha com um valor válido e idêntico à senha informada.';
   return errors;
 }
 

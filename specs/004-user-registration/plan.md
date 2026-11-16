@@ -3,11 +3,11 @@
 **Branch**: `docs/cadastro-usuario` | **Date**: 2026-11-12 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/004-user-registration/spec.md`, incluindo as três clarificações de 2026-11-12.
-**Status**: plano para revisão; implementação não iniciada.
+**Status**: revisão de 2026-11-16 autorizada junto à emenda constitucional 2.0.0.
 
 ## Summary
 
-Adicionar cadastro inicial do único titular, login por e-mail e conclusão obrigatória do cadastro legado, preservando `Owner.Id` e todos os vínculos financeiros. Reutilizar Identity, sessões SQL e CSRF. A comprovação legada gera uma autorização restrita por dez minutos, sem sessão financeira. Concluir a transição atualiza perfil e credencial e revoga sessões e autorizações em uma transação.
+Adicionar cadastro de múltiplos titulares isolados, login por e-mail e conclusão obrigatória do cadastro legado, preservando `Owner.Id` e todos os vínculos financeiros. Reutilizar Identity, sessões SQL e CSRF. A comprovação legada gera uma autorização restrita por dez minutos, sem sessão financeira. Concluir a transição atualiza perfil e credencial e revoga sessões e autorizações em uma transação.
 
 A estrutura permanece usuário → contas financeiras → movimentações, e usuário → obrigações. A baixa associa obrigação e movimentação. Toda operação financeira exige login válido e titularidade verificada no servidor.
 
@@ -19,15 +19,15 @@ A estrutura permanece usuário → contas financeiras → movimentações, e usu
 | Primary Dependencies | Identity/EF Core SQL Server 10.0.14 e RxJS 7.8.2. Reutilizar versões e lockfiles existentes, sem novos pacotes. |
 | Storage | SQL Server; migração incremental após a 003, validada em SQL Server 2025 Express LocalDB e na integração. |
 | Testing | xUnit v3 4.0.3/Microsoft Testing Platform, WebApplicationFactory, TimeProvider controlado; Angular/Vitest 4.0.8; navegador e API. |
-| Target Platform | Aplicação web responsiva, HTTPS em localhost, um titular por instalação. |
+| Target Platform | Aplicação web responsiva, HTTPS em localhost, múltiplos titulares isolados por instalação. |
 | Project Type | Monólito modular DDD/MVC com Domain, Application, Infrastructure, Api e Angular. |
 | Performance Goals | Spec sem novo SLA de latência. Login não carrega histórico financeiro. Preservar limitador existente de dez tentativas/minuto por IP e bloqueio após cinco falhas por cinco minutos. |
 | Constraints | Senha contada por pontos de código Unicode; nascimento civil em America/Sao_Paulo; relógio injetável; autorização absoluta de dez minutos desde a comprovação das credenciais antigas (VerifiedAtUtc), sem reinício por espera ou emissão, inatividade financeira de trinta minutos. |
-| Scale/Scope | Cadastro, login, saída, restauração e transição legada. Sem recuperação, edição posterior de perfil/senha, verificação de contatos ou múltiplos usuários. |
+| Scale/Scope | Cadastro, login, saída, restauração e transição legada de múltiplos titulares. Sem recuperação, edição posterior de perfil/senha ou verificação de contatos. |
 
 ## Constitution Check
 
-Gate de entrada: checklist de requisitos 16/16, clarificações respondidas e solicitação explícita para planejar. O status Draft da spec não é alterado por este comando. Não há tarefas preexistentes da 004.
+Gate original: checklist de requisitos 16/16 e clarificações respondidas. Revisão de 2026-11-16: responsável aprovou explicitamente a emenda 2.0.0, atualização dos artefatos e implementação. Checklist preservada como revisão histórica; tarefas T055–T059 rastreiam a revisão autorizada.
 
 | Princípio | Antes da pesquisa | Após o design |
 |---|---|---|
@@ -72,12 +72,12 @@ specs/004-user-registration/
 | `src/frontend/src/app/auth/` e `app.routes.ts` | Login/cadastro/transição, restauração de sessão, tratamento de expiração e erros. |
 | `tests/FinanceManager.UnitTests/Authentication/` e `tests/FinanceManager.IntegrationTests/Authentication/` | Regras, serviços, HTTP, Identity, SQL, migração, segurança e concorrência. |
 
-**Structure Decision**: ampliar o módulo de autenticação existente, mantendo módulos financeiros e identidade única.
+**Structure Decision**: ampliar o módulo de autenticação existente, mantendo módulos financeiros e identidade estável por usuário.
 
 ## Estratégia de design
 
-1. Modelar regras puras e a migração conforme [data-model.md](data-model.md). Índice e check SQL garantem o único titular; data de conclusão distingue legado e cadastro definitivo.
-2. Cadastro inicial grava perfil, hash e auditoria atomicamente, sem sessão. Conflitos nunca substituem o titular existente.
+1. Modelar regras puras e a migração conforme [data-model.md](data-model.md). Índice único SQL sobre hash persistido do e-mail normalizado garante um login por e-mail sem reduzir o tamanho de e-mail já aceito; data de conclusão distingue legado e cadastro definitivo.
+2. Cadastro inicial grava perfil, hash e auditoria atomicamente, sem sessão. E-mails duplicados são pesquisados antes da gravação e rejeitados no envio; conflitos nunca substituem o titular existente.
 3. Login definitivo pesquisa somente e-mail normalizado. **Usar acesso antigo** no login e o caminho **Criar conta → Completar cadastro existente** compartilham a comprovação legada. Credenciais antigas válidas não criam `OwnerSession`.
 4. Autorização opaca em cookie separado, hash no SQL, expiração fixa. Emissão e conclusão sincronizam a linha do titular; conclusão revalida estado/prazo e atualiza perfil/hash, revoga todas as sessões/autorizações e audita em um commit. Ver [research.md](research.md).
 5. Rejeitar titular incompleto na reconstrução e admissão da sessão. Proteger todas as rotas financeiras, inclusive obrigações, pela API; Angular somente orienta navegação.
@@ -90,15 +90,26 @@ specs/004-user-registration/
 |---|---|
 | FR-001–002 | Angular/navegador: login inicial, Criar conta/voltar, sessão válida, cadastro pendente e indisponibilidade. |
 | FR-003–004; SC-002 | xUnit domínio/aplicação, HTTP e formulário: ausentes, espaços, acentos/apóstrofos, apelido ausente, datas inválida/futura/hoje e virada de dia de São Paulo. |
-| FR-005–006; SC-002–003 | Caixa/trim do e-mail identificam mesmo titular; cada formato inválido; telefone com 9/10/15/16 dígitos, formatação e caracteres proibidos. |
+| FR-005–006; SC-002–003 | Caixa/trim do e-mail identificam mesmo titular; cada formato inválido; telefone com 10/11/12 dígitos, formatação e caracteres proibidos. |
 | FR-007; SC-002 | xUnit/Angular: 11/12/128/129 pontos de código, categorias ausentes, Unicode suplementar, espaços e senha exata; Identity não impõe política divergente. |
-| FR-008, FR-014; SC-004 | SQL/HTTP: cadastros simultâneos com e-mails iguais/distintos, reenvio após resposta perdida e falha entre gravações; nenhuma identidade parcial/adicional. |
+| FR-008, FR-014; SC-004 | SQL/HTTP: cadastros simultâneos com e-mails iguais/distintos, reenvio após resposta perdida e falha entre gravações; nenhuma identidade parcial/duplicada por e-mail; e-mails distintos criam identidades isoladas. |
 | FR-009–011; SC-001, SC-003 | HTTP/navegador: login exclusivo por e-mail, sem autenticação automática, destino com zero contas/ativas/somente arquivadas e reinício. Cinco participantes usando dados sintéticos: pelo menos quatro concluem em cinco minutos sem assistência. |
 | FR-012–013; SC-006 | xUnit/HTTP: todas as rotas financeiras com sessão ausente/incompleta/revogada/expirada, cookie restrito e IDs alheios; CSRF nas mutações; 30 minutos, limitação, bloqueio e ausência de dados pessoais nos logs. |
 | FR-015–016; SC-004–005 | Migração e transição com histórico sintético: comparar IDs, FKs, contagens, valores e vínculos. Duas conclusões, prova/sessão concorrente, rollback e replay dos cookies antigos após commit. |
 | FR-017; SC-007 | Relógio controlado: antes/exatamente/depois de dez minutos desde VerifiedAtUtc, atraso entre comprovação e emissão sem extensão do prazo, emissão já expirada sem cookie utilizável, atividade sem renovação e nova prova preservando dados não secretos. |
+| FR-018; SC-002 | xUnit de aplicação, HTTP e Angular: confirmação ausente, inválida, diferente e espaços divergentes; par válido e idêntico, campos ocultos e descarte de ambas as senhas ao sair/sucesso. |
 
 Executar [quickstart.md](quickstart.md) após implementação; registrar evidências nas futuras tarefas. Todos os FRs têm cobertura unitária de suas regras/casos de uso e cobertura de apresentação/contrato quando aplicável.
+
+## Revisão aprovada de 2026-11-16
+
+- Remover índice/check de ProvisioningSlot em nova migração, sem editar migrações anteriores nem IDs/FKs. Manter coluna histórica sem unicidade.
+- Preservar `nvarchar(max)` para e-mail. Acrescentar coluna calculada persistida `NormalizedEmailHash` (SHA2_256 dos bytes SQL de NormalizedEmail) com índice único filtrado para e-mails não nulos. Colisão de hash também rejeita a gravação, sem permitir duplicação. Comparação/login continuam pelo texto normalizado com collation binária.
+- Estado público consulta existência de legado por `Any`, sem assumir linha única. Cadastro sempre disponível; legado não impede cadastro independente.
+- Normalizar telefone de exatamente 11 dígitos e máscara completa. Exigir `confirmPassword` no DTO, interface e serviços de cadastro/conclusão, sem persistência.
+- Mapear duplicidade para `409 EMAIL_ALREADY_REGISTERED` tanto no cadastro quanto na conclusão legada, inclusive violação concorrente do índice. Preservar transação, revogação e prazo legado.
+- Validar dois usuários reais autenticados: listas, leitura por ID e mutações de contas, movimentações, obrigações e baixas não atravessam titularidade.
+- Verificação: xUnit domínio/aplicação, contratos/concorrência/migração SQL Server, Angular, build e ausência de alterações pendentes no modelo. Avaliação humana SC-001 permanece separada.
 
 ## Complexity Tracking
 

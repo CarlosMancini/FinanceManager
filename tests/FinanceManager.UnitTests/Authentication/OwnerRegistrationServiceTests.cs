@@ -5,12 +5,27 @@ namespace FinanceManager.UnitTests.Authentication;
 
 public sealed class OwnerRegistrationServiceTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("OutraSenha!123")]
+    [InlineData("SenhaValida!123 ")]
+    [InlineData("curta")]
+    public async Task InvalidConfirmationDoesNotReachStore(string? confirmation)
+    {
+        var store = new Store();
+        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null,
+            new DateOnly(1990, 1, 1), "a@b", "61998433486", "SenhaValida!123", TestContext.Current.CancellationToken, confirmation);
+        Assert.Equal(RegistrationOutcome.InvalidProfile, result.Outcome);
+        Assert.Contains("confirmPassword", result.Errors!.Keys);
+        Assert.Null(store.Profile);
+    }
     [Fact]
     public async Task ValidRegistrationPassesNormalizedProfileToStore()
     {
         var store = new Store();
         var service = new OwnerRegistrationService(store, TimeProvider.System);
-        var result = await service.RegisterAsync(" Pessoa ", null, new DateOnly(1990, 1, 1), " User@Example.test ", "(11) 99999-9999", "SenhaValida!123", TestContext.Current.CancellationToken);
+        var result = await service.RegisterAsync(" Pessoa ", null, new DateOnly(1990, 1, 1), " User@Example.test ", "(11) 99999-9999", "SenhaValida!123", TestContext.Current.CancellationToken, "SenhaValida!123");
         Assert.Equal(RegistrationOutcome.Succeeded, result.Outcome);
         Assert.Equal("USER@EXAMPLE.TEST", store.Profile!.NormalizedEmail);
         Assert.Equal("SenhaValida!123", store.Password);
@@ -24,7 +39,7 @@ public sealed class OwnerRegistrationServiceTests
     public async Task InvalidInputDoesNotReachStore(string name, string email, string phone, string password)
     {
         var store = new Store();
-        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync(name, null, new DateOnly(1990, 1, 1), email, phone, password, TestContext.Current.CancellationToken);
+        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync(name, null, new DateOnly(1990, 1, 1), email, phone, password, TestContext.Current.CancellationToken, password);
         Assert.Equal(RegistrationOutcome.InvalidProfile, result.Outcome);
         Assert.Null(store.Profile);
     }
@@ -35,8 +50,8 @@ public sealed class OwnerRegistrationServiceTests
         var token = TestContext.Current.CancellationToken;
         var store = new Store();
         var service = new OwnerRegistrationService(store, TimeProvider.System);
-        var missing = await service.RegisterAsync("Pessoa", null, null, "a@b", "11999999999", "SenhaValida!123", token);
-        var future = await service.RegisterAsync("Pessoa", null, DateOnly.MaxValue, "a@b", "11999999999", "SenhaValida!123", token);
+        var missing = await service.RegisterAsync("Pessoa", null, null, "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
+        var future = await service.RegisterAsync("Pessoa", null, DateOnly.MaxValue, "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
         Assert.Equal(RegistrationOutcome.InvalidProfile, missing.Outcome);
         Assert.Equal(RegistrationOutcome.InvalidProfile, future.Outcome);
         Assert.Null(store.Profile);
@@ -59,7 +74,7 @@ public sealed class OwnerRegistrationServiceTests
     public async Task PreservesStoreOutcomeWithoutCreatingSession(RegistrationOutcome outcome)
     {
         var store = new Store { Outcome = outcome };
-        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", TestContext.Current.CancellationToken);
+        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", TestContext.Current.CancellationToken, "SenhaValida!123");
         Assert.Equal(outcome, result.Outcome);
     }
 

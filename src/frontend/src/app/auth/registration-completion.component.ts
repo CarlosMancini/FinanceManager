@@ -3,7 +3,6 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } f
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { RegistrationFormComponent } from './registration-form.component';
-import { RegistrationService } from './registration.service';
 import { RegistrationTransitionService } from './registration-transition.service';
 import { RegistrationData, saoPauloToday, validateRegistration } from './registration-validation';
 
@@ -29,24 +28,20 @@ import { RegistrationData, saoPauloToday, validateRegistration } from './registr
 export class RegistrationCompletionComponent implements OnInit, OnDestroy {
   @ViewChild('errorSummary') private errorSummary?: ElementRef<HTMLElement>;
   private readonly transition = inject(RegistrationTransitionService);
-  private readonly registration = inject(RegistrationService);
   private readonly router = inject(Router);
   readonly loading = signal(true); readonly busy = signal(false); readonly authorized = signal(false);
   readonly message = signal(''); readonly errors = signal<Record<string, string>>({});
   username = ''; legacyPassword = '';
-  data: RegistrationData = { fullName: '', nickname: '', birthDate: '', email: '', phoneNumber: '', password: '' };
+  data: RegistrationData = { fullName: '', nickname: '', birthDate: '', email: '', phoneNumber: '', password: '', confirmPassword: '' };
 
   async ngOnInit() {
     try {
-      const state = (await this.registration.state()).state;
-      if (state === 'completed') { await this.router.navigate(['/login'], { queryParams: { registered: true } }); return; }
-      if (state === 'empty') { await this.router.navigate(['/register']); return; }
-      try { await this.transition.authorization(); this.authorized.set(true); } catch { this.authorized.set(false); }
-    } catch { this.message.set('Não foi possível verificar o cadastro.'); }
+      await this.transition.authorization(); this.authorized.set(true);
+    } catch { this.authorized.set(false); }
     finally { this.loading.set(false); }
   }
 
-  ngOnDestroy() { this.legacyPassword = ''; this.data.password = ''; }
+  ngOnDestroy() { this.legacyPassword = ''; this.clearPasswords(); }
 
   async prove() {
     if (this.busy()) return;
@@ -63,24 +58,23 @@ export class RegistrationCompletionComponent implements OnInit, OnDestroy {
     this.busy.set(true); this.message.set('');
     try {
       await this.transition.complete(this.data);
-      this.data.password = '';
+      this.clearPasswords();
       await this.router.navigate(['/login'], { queryParams: { registered: true } });
     } catch (error) {
       const response = error instanceof HttpErrorResponse ? error.error : null;
       if (response?.errors && typeof response.errors === 'object') this.errors.set(Object.fromEntries(Object.entries(response.errors).map(([key, value]) => [key, Array.isArray(value) ? String(value[0]) : 'Confira o valor informado.'])));
       if (error instanceof HttpErrorResponse && error.status === 401) {
         this.authorized.set(false);
-        this.data.password = '';
+        this.clearPasswords();
         this.message.set('A autorização não está mais válida. Comprove o acesso novamente.');
       } else {
         this.message.set(this.messageFor(error, 'Não foi possível concluir o cadastro. Tente novamente.'));
       }
+      if (response?.code === 'EMAIL_ALREADY_REGISTERED') this.errors.set({ email: 'Este e-mail já está registrado. Entre ou informe outro e-mail.' });
       this.focusError();
-      if (error instanceof HttpErrorResponse && (error.status === 0 || error.status === 409 || error.status >= 500)) {
-        try { if ((await this.registration.state()).state === 'completed') { this.data.password = ''; await this.router.navigate(['/login'], { queryParams: { registered: true } }); } } catch { /* manter formulário */ }
-      }
     } finally { this.busy.set(false); }
   }
+  private clearPasswords() { this.data.password = ''; this.data.confirmPassword = ''; }
 
   private messageFor(error: unknown, fallback: string) {
     return error instanceof HttpErrorResponse && typeof error.error?.title === 'string' ? error.error.title : fallback;

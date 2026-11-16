@@ -7,17 +7,17 @@ Ampliar o `Owner` Identity existente; regras de perfil no domínio, coordenaçã
 | Campo | Tipo e regra |
 |---|---|
 | `Id` | Guid existente e imutável, preservado nas FKs financeiras. |
-| `ProvisioningSlot` | tinyint obrigatório, check `= 1`, índice único `UX_Owners_ProvisioningSlot`. |
+| `ProvisioningSlot` | tinyint histórico obrigatório, sem check ou índice de unicidade; não representa limite de usuários. |
 | `FullName` | nvarchar(max), obrigatório quando concluído; trim externo, preservar grafia. |
 | `Nickname` | nvarchar(max) opcional; trim externo, vazio vira null. |
 | `BirthDate` | date/DateOnly, obrigatório quando concluído; existente, não futuro em America/Sao_Paulo via relógio injetável, sem idade mínima. |
 | `Email`, `NormalizedEmail` | nvarchar(max), obrigatórios quando concluído; um @ com partes não vazias, sem espaços internos; trim e caixa invariável. Comparação ordinal/collation binária coerente. |
-| `PhoneNumber` | Campo Identity, 10–15 dígitos mais `+` inicial opcional; remover espaços/parênteses/hífens, rejeitar letras/outros símbolos. |
+| `PhoneNumber` | Campo Identity, exatamente 11 dígitos, entrada bruta ou máscara completa `(DD) XXXXX-XXXX`; rejeitar outras entradas. |
 | `RegistrationCompletedAtUtc` | datetimeoffset opcional. Null = legado incompleto; preenchido = definitivo. |
 | `UserName`, `NormalizedUserName` | Campos internos Identity; novos usam ID técnico, legados mantêm nome para prova somente enquanto incompletos. |
 | Credencial e bloqueio | Campos Identity existentes de hash/stamps/lockout. Nunca persistir senha original. |
 
-Campos novos permitem null no legado. Check SQL exige campos obrigatórios não vazios quando a data de conclusão estiver preenchida. Regras de nascimento futuro são avaliadas por relógio no domínio, não pelo relógio do banco. Senha obedece FR-007, inclusive 12–128 pontos de código; validadores Identity não acrescentam regras divergentes. E-mail não precisa de índice de texto ilimitado: só pode existir um titular. Remover explicitamente `EmailIndex` do modelo Identity e da migração antes de ampliar NormalizedEmail; SQL Server não aceita nvarchar(max) como chave desse índice. Manter o índice de nome interno e o de slot.
+Campos novos permitem null no legado. Check SQL exige campos obrigatórios não vazios quando a data de conclusão estiver preenchida. Regras de nascimento futuro são avaliadas por relógio no domínio, não pelo relógio do banco. Senha obedece FR-007, inclusive 12–128 pontos de código; validadores Identity não acrescentam regras divergentes. A nova migração acrescenta `NormalizedEmailHash`, binary(32) calculado persistido por HASHBYTES SHA2_256 de NormalizedEmail, com índice único `UX_Owners_NormalizedEmailHash` filtrado por NormalizedEmail não nulo. Preserva e-mails longos; colisões também são recusadas. Remover índice/check de slot. Remover explicitamente `EmailIndex` do modelo Identity e da migração antes de ampliar NormalizedEmail; SQL Server não aceita nvarchar(max) como chave desse índice. Manter o índice de nome interno.
 
 ## RegistrationAuthorization
 
@@ -53,7 +53,7 @@ Somente acréscimo: `Id`, `OwnerId` (FK restrita), `Action` (`Registered` ou `Re
 | Estado | Operação | Resultado |
 |---|---|---|
 | Sem titular | Cadastro válido | Concluído, sem sessão, retorno ao login. |
-| Sem titular | Cadastros simultâneos | Um vencedor no slot 1, outro recebe conflito orientativo. |
+| Qualquer instalação | Cadastros simultâneos | Mesmo e-mail: um vencedor e conflito EMAIL_ALREADY_REGISTERED; e-mails distintos: dois titulares independentes. |
 | Incompleto | Prova válida | Autorização restrita, sem acesso financeiro. |
 | Incompleto | Conclusão válida dentro do prazo | Mesmo titular concluído, novo perfil/hash, sessões/autorizações revogadas. |
 | Incompleto | Falha/expiração | Dados persistidos anteriores intactos; interface mantém somente dados não secretos. |
@@ -62,8 +62,8 @@ Somente acréscimo: `Id`, `OwnerId` (FK restrita), `Action` (`Registered` ou `Re
 
 Emissão e conclusão bloqueiam a mesma linha Owner e revalidam estado/versão. Na conclusão, verificar autorização e prazo novamente no ponto da mutação via TimeProvider. Perfil, credencial, data de conclusão, revogação em lote e auditoria compartilham transação/DbContext Identity. Conflito de ConcurrencyStamp ou falha provoca rollback integral; não sobrescrever vencedor.
 
-## Migração
+## Migração original (histórico, anterior à revisão de 2026-11-16)
 
 Incremental sobre a 003: acrescentar campos/tabelas/índices/checks sem recriar banco ou mudar IDs/FKs/hash legado. Zero titulares permite cadastro novo; um titular permanece incompleto, ajustando slot para 1 se necessário; mais de um aborta sem excluir dados. Sem titular padrão ou perfil fictício.
 
-Validar SQL novo/atualizado, rollback, dois cadastros, duas conclusões e prova concorrente. Fixtures de acesso indevido devem usar IDs inexistentes/portas controladas ou testar explicitamente a rejeição de base inconsistente; não afrouxar singleton de produção para acomodar testes.
+Os testes históricos continuam cobrindo essa migração original. Na revisão de 2026-11-16, `AllowMultipleOwners` remove o índice e check de slot e acrescenta o hash único de e-mail, sem alterar registros ou migrações já aplicadas. Verificar base vazia e atualização desde a 004, preservando IDs, hash, sessões e histórico. Testes de isolamento devem usar dois usuários reais autenticados. Reverter com múltiplos titulares deve falhar sem excluir registros, pois o esquema anterior exige singleton.

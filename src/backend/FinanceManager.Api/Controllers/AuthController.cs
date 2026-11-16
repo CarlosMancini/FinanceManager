@@ -28,11 +28,11 @@ public sealed class AuthController(OwnerAccessService access, OwnerRegistrationS
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegistrationRequest request, CancellationToken cancellationToken)
     {
-        var result = await registration.RegisterAsync(request.FullName, request.Nickname, request.BirthDate, request.Email, request.PhoneNumber, request.Password, cancellationToken);
+        var result = await registration.RegisterAsync(request.FullName, request.Nickname, request.BirthDate, request.Email, request.PhoneNumber, request.Password, cancellationToken, request.ConfirmPassword);
         return result.Outcome switch
         {
             RegistrationOutcome.Succeeded => StatusCode(201, new { message = "Cadastro concluído. Entre para continuar." }),
-            RegistrationOutcome.AlreadyRegistered => ApiProblems.Result(409, "OWNER_ALREADY_REGISTERED", "Já existe um cadastro. Entre para continuar."),
+            RegistrationOutcome.AlreadyRegistered => EmailConflict(),
             RegistrationOutcome.RegistrationRequired => ApiProblems.Result(409, "REGISTRATION_REQUIRED", "Complete o cadastro existente."),
             RegistrationOutcome.InvalidProfile => ApiProblems.Validation(result.Errors?.ToDictionary() ?? new Dictionary<string, string[]> { ["profile"] = ["Confira os dados informados."] }),
             _ => ApiProblems.Result(500, "INTERNAL_ERROR", "Não foi possível concluir o cadastro.")
@@ -83,7 +83,7 @@ public sealed class AuthController(OwnerAccessService access, OwnerRegistrationS
     public async Task<IActionResult> Complete(RegistrationRequest request, CancellationToken cancellationToken)
     {
         var result = await transition.CompleteAsync(Request.Cookies[RegistrationAuthorizationCookie.Name], request.FullName,
-            request.Nickname, request.BirthDate, request.Email, request.PhoneNumber, request.Password, cancellationToken);
+            request.Nickname, request.BirthDate, request.Email, request.PhoneNumber, request.Password, cancellationToken, request.ConfirmPassword);
         if (result.Outcome == RegistrationOutcome.InvalidProfile)
             return ApiProblems.Validation(result.Errors?.ToDictionary() ?? new Dictionary<string, string[]>());
         if (result.Outcome != RegistrationOutcome.Succeeded) return AuthorizationError(result.Outcome);
@@ -94,11 +94,15 @@ public sealed class AuthController(OwnerAccessService access, OwnerRegistrationS
 
     private static IActionResult AuthorizationError(RegistrationOutcome outcome) => outcome switch
     {
+        RegistrationOutcome.AlreadyRegistered => EmailConflict(),
         RegistrationOutcome.AuthorizationExpired => ApiProblems.Result(401, "REGISTRATION_AUTHORIZATION_EXPIRED", "A autorização expirou. Comprove o acesso novamente."),
         RegistrationOutcome.AlreadyCompleted => ApiProblems.Result(409, "REGISTRATION_ALREADY_COMPLETED", "Cadastro já concluído. Entre para continuar."),
         RegistrationOutcome.AuthorizationRequired => ApiProblems.Result(401, "REGISTRATION_AUTHORIZATION_REQUIRED", "Comprove o acesso anterior para continuar."),
         _ => ApiProblems.Result(500, "INTERNAL_ERROR", "Não foi possível concluir o cadastro.")
     };
+
+    private static IActionResult EmailConflict() => ApiProblems.Result(409, "EMAIL_ALREADY_REGISTERED",
+        "Este e-mail já está registrado. Entre ou informe outro e-mail.");
 
     [AllowAnonymous]
     [EnableRateLimiting("login")]

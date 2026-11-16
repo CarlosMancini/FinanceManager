@@ -13,6 +13,7 @@ public sealed class RegistrationContractTests
     [InlineData("email")]
     [InlineData("phoneNumber")]
     [InlineData("password")]
+    [InlineData("confirmPassword")]
     public async Task EveryRequiredFieldIsValidated(string missing)
     {
         var token = TestContext.Current.CancellationToken;
@@ -21,7 +22,7 @@ public sealed class RegistrationContractTests
         await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
         using var client = factory.CreateHttpsClient();
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
-        var body = new Dictionary<string, string> { ["fullName"] = "Pessoa", ["birthDate"] = "1990-01-01", ["email"] = "a@b", ["phoneNumber"] = "11999999999", ["password"] = "SenhaValida!123" };
+        var body = new Dictionary<string, string> { ["fullName"] = "Pessoa", ["birthDate"] = "1990-01-01", ["email"] = "a@b", ["phoneNumber"] = "11999999999", ["password"] = "SenhaValida!123", ["confirmPassword"] = "SenhaValida!123" };
         body.Remove(missing);
         using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, body, token);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -65,11 +66,12 @@ public sealed class RegistrationContractTests
         using var client = factory.CreateHttpsClient();
         Assert.Contains("legacyPending", await client.GetStringAsync("/api/auth/registration-state", token));
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
-        var body = new { fullName = "Pessoa Teste", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123" };
+        var body = new { fullName = "Pessoa Teste", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123", confirmPassword = "SenhaValida!123" };
         using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, body, token);
-        await AuthTestClient.AssertProblemAsync(response, 409, "REGISTRATION_REQUIRED", token);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         await using var db = scenario.Database.CreateContext();
-        Assert.Equal(scenario.OwnerId, (await db.Users.SingleAsync(token)).Id);
+        Assert.Null((await db.Users.SingleAsync(owner => owner.Id == scenario.OwnerId, token)).RegistrationCompletedAtUtc);
+        Assert.Equal(2, await db.Users.CountAsync(token));
         Assert.Equal(1, await db.BillSettlements.CountAsync(token));
     }
 
@@ -82,7 +84,7 @@ public sealed class RegistrationContractTests
         await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
         using var client = factory.CreateHttpsClient();
         Assert.Contains("empty", await client.GetStringAsync("/api/auth/registration-state", token));
-        var body = new { fullName = "Pessoa Teste", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123" };
+        var body = new { fullName = "Pessoa Teste", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123", confirmPassword = "SenhaValida!123" };
         using (var denied = await AuthTestClient.PostAsync(client, "/api/auth/register", null, body, token)) Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
         using (var created = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, body, token)) Assert.Equal(HttpStatusCode.Created, created.StatusCode);

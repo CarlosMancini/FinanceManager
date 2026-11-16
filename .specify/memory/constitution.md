@@ -1,10 +1,13 @@
 <!--
 Sync Impact Report
-- Version: 1.2.0 → 1.3.0
-- Modified principle: III. Integridade financeira (regra global de entrada monetária)
+- Version: 1.3.0 → 2.0.0
+- Modified principle: IV. Segurança e privacidade (múltiplos titulares com isolamento)
 - Added sections: nenhuma
 - Removed sections: nenhuma
-- Follow-up: adequar os artefatos e formulários das features 002 e 003.
+- Motivo e aprovação: emenda autorizada pelo responsável em 2026-11-16 para vários logins.
+- Impacto: atualizar os artefatos da 004, remover singleton e garantir unicidade por e-mail;
+  preservar e verificar titularidade dos módulos 001–003. Documentos históricos dessas
+  features que mencionem titular único são superados por esta emenda.
 - TODO preexistente: confirmar data original de ratificação.
 -->
 # FinanceManager Constitution
@@ -52,7 +55,7 @@ impedem que detalhes de transporte ou persistência determinem o comportamento d
 
 ### IV. Segurança e privacidade
 
-- A primeira versão atende a um titular e roda localmente, com acesso restrito à interface de loopback. Exigir autenticação e validar titularidade no servidor para toda leitura e alteração financeira. Aplicar HTTPS, cookies seguros e proteção CSRF nas operações que alteram estado.
+- A aplicação permite múltiplos titulares na mesma instalação local, com acesso restrito à interface de loopback. Cada e-mail normalizado DEVE identificar um único login, inclusive sob concorrência. Os dados financeiros DEVEM permanecer isolados por titular; nenhuma sessão pode ler ou alterar dados de outro titular. Exigir autenticação e validar titularidade no servidor para toda leitura e alteração financeira. Aplicar HTTPS, cookies seguros e proteção CSRF nas operações que alteram estado.
 - Manter credenciais, chaves e tokens fora do código e do repositório. Restringir acesso ao banco e aos backups. Excluir senhas, tokens, payloads bancários e dados financeiros dos logs. Usar dados sintéticos nos testes.
 - Antes de receber dados bancários reais, definir retenção, revogação, descarte, proteção de tokens em repouso e procedimento de restauração de backup.
 
@@ -114,4 +117,4 @@ ampliações materiais das regras; PATCH para esclarecimentos e correções sem 
 de obrigação. A revisão de conformidade DEVE identificar artefatos divergentes para
 correção, sem modificar templates ou planos durante o fluxo de atualização constitucional.
 
-**Version**: 1.3.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-11
+**Version**: 2.0.0 | **Ratified**: TODO(RATIFICATION_DATE): confirmar data original de adoção | **Last Amended**: 2026-11-16

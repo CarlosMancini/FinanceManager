@@ -1,5 +1,7 @@
 # Pesquisa e decisões · 004
 
+Revisão aprovada em 2026-11-16: decisões sobre singleton e telefone abaixo são históricas e substituídas pelo plano e modelo revisados. Nova migração remove singleton e cria índice único de hash do e-mail normalizado, preservando e-mails longos. Consulta prévia melhora erro de duplicidade, índice SQL decide concorrência. Sem novos pacotes. Confirmação de senha é transitória e validada pela mesma política no servidor e cliente.
+
 Pesquisa em 2026-11-12, baseada na spec esclarecida, código existente e documentação oficial. Não restam decisões técnicas bloqueantes.
 
 ## Stack e integração existente
@@ -18,7 +20,7 @@ Pesquisa em 2026-11-12, baseada na spec esclarecida, código existente e documen
 - **Rationale**: e-mail/senha são credenciais; vínculos financeiros usam a identidade estável.
 - **Alternatives considered**: recriar titular ou aceitar nome como alias permanente descartados por FR-009/016.
 
-## Singleton e atomicidade
+## Singleton e atomicidade (decisão original superada em 2026-11-16)
 
 - **Decision**: slot 1 obrigatório, check igual a 1 e índice único. Transação explícita usa o mesmo DbContext do store Identity para perfil/hash/auditoria. Consulta prévia orienta UX; SQL decide concorrência. Após violação conhecida do índice, rollback antes de reler o estado em contexto limpo.
 - **Rationale**: índice atual é único mas nullable; `AnyAsync` sozinho não protege dois registros simultâneos.

@@ -1,5 +1,35 @@
 # Evidências de validação · 004
 
+## Revisão autorizada de 2026-11-16 · T055–T059
+
+As evidências abaixo substituem as conclusões históricas sobre singleton e telefone nas fases anteriores. A constituição foi alterada de 1.3.0 para 2.0.0 por autorização explícita do responsável: múltiplos titulares locais, um login por e-mail normalizado e isolamento financeiro. Spec, plano, modelo, pesquisa, contratos e quickstart foram atualizados sem alterar os marcadores da checklist (16/16).
+
+### Comportamento e rastreabilidade
+
+| Requisitos | Implementação e evidências |
+|---|---|
+| FR-002/008 | Formulário de cadastro disponível com contas completas ou legado. `RegistrationComponent` testado em estado completed, sem consulta de e-mail até enviar. Erro de duplicidade aparece no resumo e no campo e-mail; formulário e dados corrigíveis permanecem disponíveis. |
+| FR-005/008 | Store consulta e-mail normalizado antes de criar; duplicidade retorna `409 EMAIL_ALREADY_REGISTERED` no cadastro e conclusão. `RegistrationPersistenceTests`, `OwnerSessionPersistenceTests` e `MultipleUserRegistrationTests` cobrem concorrência com e-mails iguais/distintos, trim/caixa, repetição após reinício e ausência de sobrescrita/duplicação de auditoria. |
+| FR-006 | Domínio/API aceitam exatamente 11 dígitos ASCII ou máscara completa e persistem dígitos. Interface bloqueia teclas não numéricas, normaliza colagem e mascara progressivamente; excesso não é truncado e falha na validação. `RegistrationRevisionTests`, `RegistrationProfileTests`, contratos HTTP e testes Angular cobrem limites 10/11/12, prefixo internacional, símbolos, máscara e evento real de input no componente. |
+| FR-007/018 | Serviços de cadastro e transição validam confirmação obrigatória pela mesma política e igualdade exata. DTO não persiste confirmação. Testes unitários/HTTP/Angular cobrem ausência, divergência, espaços e validade; dois campos ocultos com autocomplete adequado, erro associado, descarte ao sair/sucesso/expiração da transição. |
+| FR-008/014/016 | Nova migração `20261116185815_AllowMultipleOwners` remove índice/check de slot e cria hash calculado persistido com índice único de e-mail, preservando suporte a e-mails longos. Testes em SQL Server validam base nova, atualização desde a 003 e 004 anterior, perfil/hash/identidade/histórico preservados, rollback de cadastro e rejeição da reversão com múltiplos titulares sem excluir registros. Migrações anteriores não foram modificadas. |
+| FR-012/016 | `TwoAuthenticatedUsersCannotReadOrModifyEachOthersFinancialData` cadastra e autentica dois usuários reais na mesma instalação; verifica listas vazias/sem dados alheios, leitura direta e mutações negadas em contas, movimentações, obrigações e baixas, inclusive tentativa de lançar em conta alheia. Titular original mantém acesso e registros íntegros. |
+| FR-015–017 | Suíte legada preservada. Teste novo impede conclusão com e-mail de outro usuário, mantém titular incompleto e sessão sem revogação após conflito e permite repetir com e-mail livre. Estado global não é mais usado para inferir sucesso individual após resposta perdida. |
+
+### Comandos e resultados finais
+
+- `dotnet build FinanceManager.slnx --no-restore`: passou, zero avisos/erros; projetos também recompilados nas execuções finais de testes.
+- `dotnet test --project tests/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-restore`: **110/110** passaram, sem ignorados.
+- `dotnet test --project tests/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-restore`, com `ConnectionStrings__FinanceManagerTests` em SQL Server 2025 LocalDB: **90/90** passaram, sem ignorados (43 segundos). Bases sintéticas isoladas da fixture, sem usar banco pessoal. Log local ignorado: `.local-tools/registration-revision-integration.log`.
+- Angular executado com o Node **24.22.2** já disponível em `.local-tools/node/node_modules/node/bin/node.exe`, na pasta `src/frontend`, chamando `node_modules/@angular/cli/bin/ng.js test --watch=false`: **54/54**, 11 arquivos, sem ignorados.
+- Mesmo Node/CLI com `build`: passou; bundle inicial 364,68 kB. Sem alterar dependências ou lockfiles.
+- `dotnet ef migrations has-pending-model-changes --project src/backend/FinanceManager.Infrastructure --startup-project src/backend/FinanceManager.Api --no-build`: nenhuma mudança pendente.
+- `git diff --check`: passou. Ignore files da stack conferidos; nenhum padrão crítico faltante. `.specify/extensions.yml` ausente: sem hooks antes/depois da implementação ou emenda.
+
+Teste prévio do comportamento antigo: `RegistrationRevisionTests` apresentou quatro falhas esperadas, pois aceitava 10/12 dígitos, prefixo internacional e máscara incompleta; passou após a alteração. A primeira execução Angular encontrou Node global 24.13.0 incompatível; foi substituída pela execução com a versão fixada já instalada. A primeira tentativa SQL no sandbox não acessou LocalDB/chaves locais; as execuções com acesso ao ambiente de testes passaram. O novo teste de isolamento teve inicialmente uma data futura em São Paulo na fixture (00:00 UTC); o relógio sintético foi ajustado para meio-dia, sem alterar regras do produto, e o teste passou.
+
+T055–T059 concluídas. Esta revisão foi validada por testes de componentes e API; não foi realizada nova inspeção visual manual no navegador. SC-001/T053 (avaliação com cinco participantes) e T054 (revisão final dependente dessa avaliação) continuam pendentes: não se declara toda a feature 004 concluída.
+
 ## Fase 1 · T001 — baseline validado
 
 - Checklist de requisitos: 16/16 itens marcados.

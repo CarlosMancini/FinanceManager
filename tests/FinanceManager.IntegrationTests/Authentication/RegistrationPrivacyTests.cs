@@ -55,10 +55,10 @@ public sealed class RegistrationPrivacyTests
         var logs = new CapturedLogs();
         await using var host = factory.WithWebHostBuilder(builder => builder.ConfigureLogging(logging => logging.AddProvider(logs)));
         using var client = host.CreateClient(new() { BaseAddress = new Uri("https://localhost"), HandleCookies = true });
-        var profile = new { fullName = "NomeSinteticoPrivado", birthDate = "1990-01-01", email = "privado@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123" };
+        var profile = new { fullName = "NomeSinteticoPrivado", birthDate = "1990-01-01", email = "privado@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123", confirmPassword = "SenhaSintetica!123" };
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
         using var invalid = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf,
-            new { fullName = profile.fullName, birthDate = profile.birthDate, email = profile.email, phoneNumber = "telefonePrivadoInvalido", password = profile.password }, token);
+            new { fullName = profile.fullName, birthDate = profile.birthDate, email = profile.email, phoneNumber = "telefonePrivadoInvalido", password = profile.password, confirmPassword = profile.password }, token);
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         using var created = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, profile, token);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
@@ -87,7 +87,7 @@ public sealed class RegistrationPrivacyTests
         using var client = host.CreateClient(new() { BaseAddress = new Uri("https://localhost"), HandleCookies = true });
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
         using var registration = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf,
-            new { fullName = "NomePrivadoSintetico", birthDate = "1990-01-01", email = "privacidade@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123" }, token);
+            new { fullName = "NomePrivadoSintetico", birthDate = "1990-01-01", email = "privacidade@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123", confirmPassword = "SenhaSintetica!123" }, token);
         Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
         using var login = await AuthTestClient.LoginAsync(client, token, email: "privacidade@example.test", password: "SenhaSintetica!123");
         Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
@@ -110,7 +110,7 @@ public sealed class RegistrationPrivacyTests
         using var client = factory.CreateHttpsClient();
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
         using var registration = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf,
-            new { fullName = "Pessoa Sintética", birthDate = "1990-01-01", email = "csrf@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123" }, token);
+            new { fullName = "Pessoa Sintética", birthDate = "1990-01-01", email = "csrf@example.test", phoneNumber = "11999999999", password = "SenhaSintetica!123", confirmPassword = "SenhaSintetica!123" }, token);
         Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
         using var login = await AuthTestClient.LoginAsync(client, token, email: "csrf@example.test", password: "SenhaSintetica!123");
         Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);

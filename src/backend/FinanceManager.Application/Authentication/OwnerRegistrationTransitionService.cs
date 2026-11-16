@@ -30,12 +30,12 @@ public sealed class OwnerRegistrationTransitionService(
     }
 
     public async Task<RegistrationResult> CompleteAsync(string? token, string? fullName, string? nickname, DateOnly? birthDate,
-        string? email, string? phoneNumber, string? password, CancellationToken cancellationToken)
+        string? email, string? phoneNumber, string? password, CancellationToken cancellationToken, string? confirmPassword = null)
     {
         if (!TryHash(token, out var hash)) return new(RegistrationOutcome.AuthorizationRequired);
         var authorization = await GetAuthorizationAsync(token, cancellationToken);
         if (authorization.Outcome != RegistrationOutcome.Succeeded) return new(authorization.Outcome);
-        var (profile, errors) = registration.Validate(fullName, nickname, birthDate, email, phoneNumber, password);
+        var (profile, errors) = registration.Validate(fullName, nickname, birthDate, email, phoneNumber, password, confirmPassword);
         if (errors.Count > 0) return new(RegistrationOutcome.InvalidProfile, errors);
         return await store.CompleteAsync(hash, profile!, password!, clock.GetUtcNow(), cancellationToken);
     }

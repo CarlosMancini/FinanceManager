@@ -6,7 +6,7 @@ namespace FinanceManager.IntegrationTests.Authentication;
 
 public sealed class RegistrationTransitionContractTests
 {
-    internal static readonly object Profile = new { fullName = "Pessoa Sintética", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123" };
+    internal static readonly object Profile = new { fullName = "Pessoa Sintética", birthDate = "1990-01-01", email = "pessoa@example.test", phoneNumber = "11999999999", password = "SenhaValida!123", confirmPassword = "SenhaValida!123" };
 
     [Fact]
     public async Task InvalidProofIsGenericAndFiveFailuresBlockEvenTheCorrectPassword()

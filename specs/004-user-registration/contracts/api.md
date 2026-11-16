@@ -12,7 +12,7 @@ Evolui somente autenticação/cadastro dos contratos da 001. API e SPA são atua
 
 ## DTO de cadastro
 
-Usado em cadastro inicial e conclusão:
+Usado em cadastro inicial e conclusão. `confirmPassword` é obrigatório, válido pela mesma política e exatamente igual a `password`; erros retornam `errors.confirmPassword`. Telefone aceita 11 dígitos ou máscara completa, sem prefixo internacional:
 
 ```json
 {
@@ -20,8 +20,9 @@ Usado em cadastro inicial e conclusão:
   "nickname": null,
   "birthDate": "1990-05-20",
   "email": "pessoa@example.test",
-  "phoneNumber": "+55 (11) 90000-0000",
-  "password": "SenhaSintetica!42"
+  "phoneNumber": "(11) 90000-0000",
+  "password": "SenhaSintetica!42",
+  "confirmPassword": "SenhaSintetica!42"
 }
 ```
 
@@ -33,7 +34,7 @@ Usado em cadastro inicial e conclusão:
 |---|---|---|
 | `GET /api/auth/csrf` | Anônimo, existente. | `204` e cookies antiforgery existentes. |
 | `GET /api/auth/registration-state` | Anônimo; consulta somente disponibilidade. | `200 {"state":"empty"}` ou `legacyPending` ou `completed`. Sem ID, e-mail, nome ou telefone. |
-| `POST /api/auth/register` | DTO de cadastro + CSRF; somente instalação vazia. | `201 {"message":"Cadastro concluído. Entre para continuar."}` após commit; nenhum cookie financeiro. |
+| `POST /api/auth/register` | DTO de cadastro + CSRF; disponível mesmo com usuários existentes; e-mail normalizado único. | `201 {"message":"Cadastro concluído. Entre para continuar."}` após commit; nenhum cookie financeiro. |
 | `POST /api/auth/login` | `{ "email":"pessoa@example.test", "password":"..." }` + CSRF. | `204` e cookie financeiro existente se titular concluído e credenciais válidas. `401 INVALID_CREDENTIALS` caso contrário. |
 | `POST /api/auth/registration/proof` | `{ "username":"acesso-antigo", "password":"..." }` + CSRF; titular incompleto. | `200 {"expiresAtUtc":"2026-11-12T15:10:00Z"}` e cookie restrito; nunca cookie/sessão financeira. |
 | `GET /api/auth/registration/authorization` | Cookie restrito, sem exigir sessão financeira. | `200 {"expiresAtUtc":"..."}` se válido, sem renovar prazo. `401` se ausente/expirado/revogado ou titular concluído. |
@@ -47,8 +48,8 @@ O formulário **Usar acesso antigo** dentro do login chama `registration/proof`,
 
 | Situação | Status/code e efeito |
 |---|---|
-| Cadastro inicial quando já concluído, inclusive reenvio após resposta perdida | `409 OWNER_ALREADY_REGISTERED`, orientar login, nenhuma substituição. |
-| Cadastro inicial quando existe legado incompleto | `409 REGISTRATION_REQUIRED`, orientar comprovação e conclusão. |
+| E-mail já cadastrado em cadastro ou conclusão, inclusive concorrência/reenvio | `409 EMAIL_ALREADY_REGISTERED`, “Este e-mail já está registrado. Entre ou informe outro e-mail.”, nenhuma substituição. |
+| Cadastro quando existe legado incompleto | Permitido para e-mail livre; conclusão do legado exige prova separada. |
 | Prova inválida ou titular inexistente/já concluído | `401 INVALID_CREDENTIALS`, mesma mensagem, sem autorização. |
 | Conclusão sem cookie ou token desconhecido | `401 REGISTRATION_AUTHORIZATION_REQUIRED`, solicitar prova. |
 | Conclusão com autorização expirada ainda enviada | `401 REGISTRATION_AUTHORIZATION_EXPIRED`, solicitar nova prova; nenhum dado persistido alterado. |
@@ -57,7 +58,7 @@ O formulário **Usar acesso antigo** dentro do login chama `registration/proof`,
 | Outra conclusão vence disputa já iniciada com autorização válida | `409 REGISTRATION_ALREADY_COMPLETED`, orientar login, sem sobrescrita. |
 | Falha de gravação | Erro em português sem detalhes internos; `500 INTERNAL_ERROR` para falha inesperada; rollback integral e sem confirmação de sucesso. |
 
-Se navegador já removeu cookie pelo vencimento, ausência produz `REGISTRATION_AUTHORIZATION_REQUIRED`; a interface usa seu `expiresAtUtc` para explicar a expiração. Ambos os caminhos preservam os dados não secretos no formulário e exigem prova nova. Cadastro inicial não exige chave idempotente: slot único e estado atual impedem duplicação; reenvio não recebe falso sucesso nem muda dados. Na conclusão, após resposta perdida, estado `completed` orienta novo login; nunca reaplicar a credencial.
+Se navegador já removeu cookie pelo vencimento, ausência produz `REGISTRATION_AUTHORIZATION_REQUIRED`; a interface usa seu `expiresAtUtc` para explicar a expiração. Ambos os caminhos preservam os dados não secretos no formulário e exigem prova nova. Cadastro inicial não exige chave idempotente: e-mail único impede duplicação; reenvio não recebe falso sucesso nem muda dados. Na conclusão, após resposta perdida, manter formulário e orientar nova tentativa ou login, sem inferir sucesso pelo estado global de outros titulares; nunca reaplicar a credencial.
 
 ## Cookies, tempo e barreira financeira
 

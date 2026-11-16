@@ -403,6 +403,11 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .UseCollation("Latin1_General_100_BIN2");
 
+                    b.Property<byte[]>("NormalizedEmailHash")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("binary(32)")
+                        .HasComputedColumnSql("CONVERT(binary(32), HASHBYTES('SHA2_256', [NormalizedEmail]))", true);
+
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -434,19 +439,18 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("NormalizedEmailHash")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Owners_NormalizedEmailHash")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
+
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.HasIndex("ProvisioningSlot")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Owners_ProvisioningSlot");
-
                     b.ToTable("AspNetUsers", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Owners_ProvisioningSlot", "[ProvisioningSlot] = 1");
-
                             t.HasCheckConstraint("CK_Owners_RegistrationProfile", "[RegistrationCompletedAtUtc] IS NULL OR ([FullName] IS NOT NULL AND LEN(LTRIM(RTRIM([FullName]))) > 0 AND [BirthDate] IS NOT NULL AND [Email] IS NOT NULL AND LEN(LTRIM(RTRIM([Email]))) > 0 AND [NormalizedEmail] IS NOT NULL AND LEN(LTRIM(RTRIM([NormalizedEmail]))) > 0 AND [PhoneNumber] IS NOT NULL AND LEN(LTRIM(RTRIM([PhoneNumber]))) > 0)");
                         });
                 });
@@ -567,7 +571,7 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("RegistrationAudits", t =>
+                    b.ToTable("RegistrationAudits", null, t =>
                         {
                             t.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted')");
                         });
