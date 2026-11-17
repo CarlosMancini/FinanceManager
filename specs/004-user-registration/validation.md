@@ -1,5 +1,9 @@
 # Evidências de validação · 004
 
+## Atualização de 2026-11-17 · T053 · avaliação SC-001
+
+- O responsável confirmou a conclusão da avaliação de usabilidade com cinco participantes e autorizou marcar T053 concluída. Conforme a confirmação, pelo menos quatro concluíram cadastro e login em até cinco minutos, sem assistência. Registro: [validation-usability.md](validation-usability.md). Tempos/resultados individuais não foram fornecidos nesta atualização. T054 continua pendente; esta confirmação não declara a feature 004 concluída.
+
 ## Revisão de 2026-11-17 · T062–T064 · e-mail e telefone
 
 - Escopo e esclarecimento confirmados pelo responsável: bloquear `teste@gmail`; aceitar domínio com extensão (`.com`, `.com.br`) e rejeitar vírgulas. O exemplo `.com,br` era grafia incorreta de `.com.br`. Telefone com placeholder literal `(DDD) + Telefone` e máximo de 11 dígitos incluindo DDD. FR-005/006, plano, modelo de dados, pesquisa, contratos e quickstart atualizados; constituição preservada, sem novas dependências ou migração SQL.

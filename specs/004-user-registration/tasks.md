@@ -119,7 +119,7 @@ Tarefas de teste aparecem antes da implementação: escrever os cenários e conf
 - [X] T050 [P] Criar/validar `tests/FinanceManager.IntegrationTests/Authentication/RegistrationPrivacyTests.cs` para logs/respostas sem perfil, senha/token/payload financeiro, auditoria mínima e estado público sem PII; conferir HTTPS loopback, atributos de cookies, CSRF em todas as mutações e consulta de login sem carregar histórico. Registrar resultados em `specs/004-user-registration/validation-security.md`. (FR-007/012–014; SC-006)
 - [X] T051 [P] Validar teclado/foco/labels/erros/status e layout responsivo dos componentes sob `src/frontend/src/app/auth/`, corrigindo somente falhas dentro do contrato UI; registrar evidências sem segredos em `specs/004-user-registration/validation-ui.md`. (FR-001–007/010/014/017)
 - [X] T052 Executar todas as suítes xUnit/SQL/Angular, build e `has-pending-model-changes` conforme `specs/004-user-registration/quickstart.md`; conferir regressões 001–003 e verificações da matriz em `plan.md`, registrar comandos/resultados em `specs/004-user-registration/validation.md` e corrigir falhas sem remover/enfraquecer testes. (FR-001–017; SC-002–007)
-- [ ] T053 Realizar avaliação SC-001 com cinco participantes usando dados sintéticos e instalação vazia por participante, medir cadastro+login sem assistência e registrar tempos/resultados em `specs/004-user-registration/validation-usability.md`; pelo menos quatro devem concluir em até cinco minutos. Se participantes não estiverem disponíveis, manter tarefa e SC-001 pendentes, sem substituir por teste automatizado.
+- [X] T053 Realizar avaliação SC-001 com cinco participantes usando dados sintéticos e instalação vazia por participante, medir cadastro+login sem assistência e registrar tempos/resultados em `specs/004-user-registration/validation-usability.md`; pelo menos quatro devem concluir em até cinco minutos. O responsável confirmou a conclusão em 2026-11-17; ver `validation-usability.md`.
 - [ ] T054 Revisar conformidade constitucional/DDD/MVC, endpoints via aplicação, convenções de nomes/mensagens, testes por regra, rastreabilidade e evidências finais em `specs/004-user-registration/validation.md`; atualizar apenas o progresso efetivamente validado em `specs/004-user-registration/tasks.md`. Não declarar feature concluída com SC/teste pendente, não alterar constituição/spec/plano para acomodar implementação e encerrar na 004.
 
 ## Dependencies & Execution Order
@@ -145,6 +145,10 @@ Phase 1 (T001–T002)
 - T003/T004/T007 podem iniciar após setup em arquivos distintos; T005 depende de T003, T006 de T004. T008 depende de T005–006; T009 de T007–008; T010 de T009. T011 depende de T005–010; T012/T013/T014 seguem o esquema pronto. Fundação termina somente com todos os seus testes passando; T012 valida infraestrutura genérica em controller exclusivo do host de teste, enquanto o contrato real de cadastro é testado em T015 e validado após T020, antes de T025.
 - Dentro de cada história, escrever testes antes dos casos de uso correspondentes. Serviços antes de adapters/endpoints integrados, endpoints e formulário antes da navegação final; checkpoint após testes passarem. Pré-requisitos específicos aparecem nas descrições.
 - T050/T051 após T049 podem ocorrer em paralelo por usarem arquivos/evidências distintos; T052 consolida correções, T053 mede o produto validado e T054 depende de todas as evidências, inclusive SC-001.
+
+## Retomada de 2026-11-17 — avaliação SC-001
+
+- T053 marcada como concluída conforme confirmação do responsável pela avaliação com cinco participantes. O registro correspondente está em `validation-usability.md`; T054 permanece pendente até revisão final das evidências.
 
 ## Parallel Examples
 
@@ -201,7 +205,7 @@ São 54 tarefas: 2 setup, 12 fundação, 11 US1, 10 US2, 14 US3 e 5 transversais
 
 ## Phase 7: Revisão autorizada de 2026-11-16 — múltiplos usuários
 
-Solicitação e emenda 2.0.0 aprovadas pelo responsável; esta fase substitui as regras históricas de singleton/telefone das tarefas anteriores. T053 e T054 continuam pendentes e não integram a conclusão automática desta revisão.
+Solicitação e emenda 2.0.0 aprovadas pelo responsável; esta fase substitui as regras históricas de singleton/telefone das tarefas anteriores. Na revisão de 2026-11-16, T053 e T054 ainda estavam pendentes; T053 foi concluída conforme atualização de 2026-11-17. T054 permanece pendente.
 
 - [X] T055 Atualizar constituição e artefatos 004 com múltiplos titulares, e-mail único, confirmação e telefone de 11 dígitos. (FR-003/005–008/012/018)
 - [X] T056 Escrever/ajustar testes xUnit, SQL e Angular para telefone, confirmação, cadastros com e-mails iguais/distintos, transição e isolamento financeiro. Confirmar falhas antes da implementação. (SC-002–006)
