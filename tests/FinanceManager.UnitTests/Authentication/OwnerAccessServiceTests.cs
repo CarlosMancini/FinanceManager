@@ -15,8 +15,8 @@ public sealed class OwnerAccessServiceTests
     {
         var service = new OwnerRegistrationService(new RegistrationStore(), TimeProvider.System);
         var token = TestContext.Current.CancellationToken;
-        var first = await service.RegisterAsync("Titular", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
-        var second = await service.RegisterAsync("Outro", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
+        var first = await service.RegisterAsync("Titular", null, new DateOnly(1990, 1, 1), "a@b.test", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
+        var second = await service.RegisterAsync("Outro", null, new DateOnly(1990, 1, 1), "a@b.test", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
         Assert.Equal(RegistrationOutcome.Succeeded, first.Outcome);
         Assert.Equal(RegistrationOutcome.AlreadyRegistered, second.Outcome);
     }

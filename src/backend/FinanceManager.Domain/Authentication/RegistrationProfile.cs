@@ -26,11 +26,14 @@ public sealed class RegistrationProfile
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Informe o nome completo.", nameof(fullName));
         if (birthDate is null || birthDate > today) throw new ArgumentException("Informe uma data de nascimento válida.", nameof(birthDate));
         var normalizedEmail = email?.Trim();
-        if (string.IsNullOrEmpty(normalizedEmail) || normalizedEmail.Any(char.IsWhiteSpace))
+        if (string.IsNullOrEmpty(normalizedEmail) || normalizedEmail.Any(c => char.IsWhiteSpace(c) || c == ','))
             throw new ArgumentException("Informe um e-mail válido.", nameof(email));
         var at = normalizedEmail.IndexOf('@');
         if (at <= 0 || at != normalizedEmail.LastIndexOf('@') || at == normalizedEmail.Length - 1)
             throw new ArgumentException("Informe um e-mail válido.", nameof(email));
+        var domainParts = normalizedEmail[(at + 1)..].Split('.');
+        if (domainParts.Length < 2 || domainParts.Any(string.IsNullOrEmpty))
+            throw new ArgumentException("Informe um e-mail válido com domínio e extensão.", nameof(email));
         if (string.IsNullOrWhiteSpace(phoneNumber)) throw new ArgumentException("Informe um telefone válido.", nameof(phoneNumber));
         var phone = phoneNumber.Trim();
         if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"\A(?:[0-9]{11}|\([0-9]{2}\) [0-9]{5}-[0-9]{4})\z"))

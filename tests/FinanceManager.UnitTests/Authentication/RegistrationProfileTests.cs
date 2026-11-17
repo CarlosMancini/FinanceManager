@@ -18,22 +18,22 @@ public sealed class RegistrationProfileTests
     }
 
     [Theory]
-    [InlineData("", "a@b", "1199999999")]
-    [InlineData("  ", "a@b", "1199999999")]
+    [InlineData("", "a@b.test", "1199999999")]
+    [InlineData("  ", "a@b.test", "1199999999")]
     [InlineData("Nome", "@b", "1199999999")]
     [InlineData("Nome", "a@", "1199999999")]
     [InlineData("Nome", "a@@b", "1199999999")]
     [InlineData("Nome", "a b@c", "1199999999")]
-    [InlineData("Nome", "a@b", "123456789")]
-    [InlineData("Nome", "a@b", "1234567890123456")]
-    [InlineData("Nome", "a@b", "1234A56789")]
+    [InlineData("Nome", "a@b.test", "123456789")]
+    [InlineData("Nome", "a@b.test", "1234567890123456")]
+    [InlineData("Nome", "a@b.test", "1234A56789")]
     public void RejectsInvalidRequiredValues(string name, string email, string phone) =>
         Assert.Throws<ArgumentException>(() => RegistrationProfile.Create(name, null, Today, email, phone, Today));
 
     [Fact]
     public void AcceptsLongEmailAndRejectsFutureBirth()
     {
-        var email = new string('a', 260) + "@b";
+        var email = new string('a', 260) + "@b.test";
         Assert.Equal(email, RegistrationProfile.Create("Nome", "apelido", Today, email, "12345678901", Today).Email);
         Assert.Throws<ArgumentException>(() => RegistrationProfile.Create("Nome", null, Today.AddDays(1), email, "12345678901", Today));
     }
@@ -48,15 +48,15 @@ public sealed class RegistrationProfileTests
         var currentDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(after, zone).DateTime);
         Assert.Equal(new DateOnly(2026, 11, 11), previousDay);
         Assert.Equal(new DateOnly(2026, 11, 12), currentDay);
-        Assert.Throws<ArgumentException>(() => RegistrationProfile.Create("Nome", null, currentDay, "a@b", "12345678901", previousDay));
-        Assert.Equal(currentDay, RegistrationProfile.Create("Nome", null, currentDay, "a@b", "12345678901", currentDay).BirthDate);
+        Assert.Throws<ArgumentException>(() => RegistrationProfile.Create("Nome", null, currentDay, "a@b.test", "12345678901", previousDay));
+        Assert.Equal(currentDay, RegistrationProfile.Create("Nome", null, currentDay, "a@b.test", "12345678901", currentDay).BirthDate);
     }
 
     [Fact]
     public void RejectsAbsentBirthAndAcceptsElevenPhoneDigits()
     {
-        Assert.Throws<ArgumentException>(() => RegistrationProfile.Create("Nome", null, null, "a@b", "12345678901", Today));
-        Assert.Equal("12345678901", RegistrationProfile.Create("Nome", null, Today, "a@b", "12345678901", Today).PhoneNumber);
+        Assert.Throws<ArgumentException>(() => RegistrationProfile.Create("Nome", null, null, "a@b.test", "12345678901", Today));
+        Assert.Equal("12345678901", RegistrationProfile.Create("Nome", null, Today, "a@b.test", "12345678901", Today).PhoneNumber);
         Assert.False(DateOnly.TryParseExact("2026-02-31", "yyyy-MM-dd", out _));
     }
 }

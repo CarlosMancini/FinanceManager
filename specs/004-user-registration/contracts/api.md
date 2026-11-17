@@ -28,6 +28,8 @@ Usado em cadastro inicial e conclusão. `confirmPassword` é obrigatório, váli
 
 `nickname` pode estar ausente/null/vazio; demais campos são obrigatórios. Nascimento é data ISO civil; não converter por UTC. Aplicar FR-003–007 no servidor, inclusive política Unicode da senha e normalização coerente do e-mail. Exemplos são exclusivamente sintéticos.
 
+Revisão de 2026-11-17: `email` exige domínio e extensão com pelo menos um ponto e segmentos não vazios; rejeitar `teste@gmail`, pontos consecutivos/inicial/final no domínio e vírgula. Aceitar `.com` e `.com.br`. Falha retorna `400 VALIDATION_FAILED` com `errors.email`, sem gravação. Telefone excedente continua retornando `errors.phoneNumber` em chamadas diretas; o limite de entrada da interface não substitui a validação do servidor.
+
 ## Endpoints
 
 | Método e rota | Entrada e autorização | Resposta |

@@ -18,7 +18,7 @@ public sealed class RegistrationIdentityValidationTests
         await using var scope = factory.Services.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<Owner>>();
         var id = Guid.NewGuid();
-        var owner = new Owner { Id = id, ProvisioningSlot = 1, UserName = id.ToString("N"), FullName = "Pessoa", BirthDate = new DateOnly(1990, 1, 1), Email = new string('a', 260) + "@b", PhoneNumber = "12345678901", RegistrationCompletedAtUtc = factory.Clock.GetUtcNow() };
+        var owner = new Owner { Id = id, ProvisioningSlot = 1, UserName = id.ToString("N"), FullName = "Pessoa", BirthDate = new DateOnly(1990, 1, 1), Email = new string('a', 260) + "@b.test", PhoneNumber = "12345678901", RegistrationCompletedAtUtc = factory.Clock.GetUtcNow() };
         var result = await users.CreateAsync(owner, "Aa1!" + new string('a', 123) + "😀");
         Assert.True(result.Succeeded, string.Join(", ", result.Errors.Select(e => e.Code)));
         Assert.True(await users.CheckPasswordAsync(owner, "Aa1!" + new string('a', 123) + "😀"));

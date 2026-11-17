@@ -57,4 +57,6 @@ Migrar base na 004 anterior para nova migração, preservando IDs, hash e histó
 
 ## Evidência de aceite
 
+Revisão 2026-11-17: tentar cadastrar com `teste@gmail`, `teste@dominio.`, `teste@.com`, `teste@dominio..com` e `teste@dominio.com,br`: impedir envio no formulário e rejeitar na API. Aceitar `.com` e `.com.br`. Conferir placeholder `(DDD) + Telefone`; digitar/colar mais de 11 números e verificar que somente os primeiros 11 permanecem com máscara. Dez dígitos devem impedir envio; chamada direta da API com 12 dígitos deve falhar. Repetir no formulário compartilhado de conclusão legada.
+
 Registrar por FR/SC: comandos e resultados, cenários SQL/HTTP, capturas de interface sem segredos e comparação de histórico. Para SC-001, usar cinco participantes com dados sintéticos e instalação vazia por participante; pelo menos quatro cadastram e entram em até cinco minutos sem assistência. Teste automatizado não substitui essa medição. A aprovação do plano não marca esses critérios como cumpridos.

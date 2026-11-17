@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-12
 
-**Status**: Revisão de 2026-11-16 autorizada para implementação
+**Status**: Revisão de 2026-11-17 autorizada para implementação
 
 **Input**: Cadastro com nome completo, apelido opcional, data de nascimento, e-mail, telefone e senha segura. Login por e-mail e senha como tela inicial, com opção de criar conta. Recuperação de senha fica para depois.
 
@@ -20,6 +20,10 @@
 
 - Revisão aprovada: múltiplos usuários locais com dados financeiros isolados; um login por e-mail normalizado. Criar conta permanece disponível. Duplicidade é informada no envio, sem alterar conta existente.
 - Confirmação de senha obrigatória, com ambas válidas e exatamente iguais; telefone com 11 dígitos e máscara `(61) 99843-3486`.
+
+### Session 2026-11-17
+
+Revisão de 2026-11-17 autorizada pelo responsável: exigir domínio com extensão no e-mail; bloquear `teste@gmail`. Esclarecimento confirmado: o exemplo pretendido é `enderecoEmail@dominio.com.br`, com pontos; vírgulas devem ser rejeitadas. Telefone deve impedir entrada além de 11 dígitos e exibir o placeholder `(DDD) + Telefone`, mantendo a máscara.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -41,6 +45,7 @@ Como pessoa que acessa uma instalação nova ou com outros usuários, quero esco
 6. **Given** falha ou interrupção durante o cadastro, **When** volta a tentar, **Then** não existem cadastros parciais ou duplicados; só há sucesso após confirmação da gravação. Se o envio anterior foi concluído, a interface orienta a fazer login. (FR-008, FR-014)
 7. **Given** senha e confirmação ausentes, inválidas ou diferentes, **When** tenta cadastrar, **Then** recebe orientação no campo correspondente e nenhuma conta é criada; duas senhas válidas e exatamente iguais permitem prosseguir. (FR-007, FR-018)
 8. **Given** o campo de telefone, **When** digita os números `61998433486`, **Then** vê `(61) 99843-3486`; ao enviar menos ou mais de 11 dígitos, recebe orientação e nenhuma conta é criada. (FR-006)
+9. **Given** um formulário válido nos demais campos, **When** tenta cadastrar com `teste@gmail`, domínio sem segmento obrigatório ou e-mail com vírgula, **Then** o envio é impedido com erro no e-mail; `.com` e `.com.br` permitem prosseguir. Digitar/colar mais de 11 números no telefone mantém somente os primeiros 11, sem contar os caracteres da máscara. (FR-005/006)
 
 ---
 
@@ -86,7 +91,7 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 
 - Campos obrigatórios só com espaços são ausentes. Nomes com acentos, hífens e apóstrofos são aceitos, sem exigir artificialmente dois sobrenomes.
 - Data inexistente, como 31/02, ou futura é rejeitada. Hoje é aceito; não há idade mínima nesta feature.
-- E-mail sem parte local, sem domínio, com espaços internos ou sem um único `@` é rejeitado.
+- E-mail sem parte local, sem domínio/extensão separados por ponto, com segmentos vazios de domínio, vírgulas, espaços internos ou sem um único `@` é rejeitado. `teste@gmail` é inválido; `enderecoEmail@dominio.com` e `enderecoEmail@dominio.com.br` são válidos.
 - Telefone deve conter exatamente 11 dígitos ASCII, incluindo DDD. A interface aceita entrada numérica e aplica `(DD) XXXXX-XXXX`; servidor aceita dígitos ou essa formatação. Entradas incompletas, excedentes e símbolos não permitidos são rejeitados.
 - Cada categoria da senha é verificada separadamente, inclusive nos limites de comprimento; senha não é aparada, truncada nem tem sua caixa alterada.
 - Retornar do cadastro ao login não cria conta. Senhas não permanecem preenchidas ao abandonar a tela ou após sucesso.
@@ -102,8 +107,8 @@ Como titular provisionado antes desta feature, quero completar meus dados e defi
 - **FR-002**: O login DEVE oferecer **Criar conta**, que abre tela dedicada de cadastro com opção de voltar ao login. O formulário permanece disponível mesmo com contas existentes; a transição pendente é uma opção separada.
 - **FR-003**: O cadastro DEVE solicitar nome completo, apelido/nome pelo qual deseja ser chamado, data de nascimento, e-mail, telefone, senha e confirmação de senha. Apenas o apelido é opcional. Campos obrigatórios ausentes ou só com espaços DEVEM impedir a conclusão, inclusive em tentativas fora da interface.
 - **FR-004**: O sistema DEVE salvar nome e apelido preservando a grafia, removendo somente espaços nas extremidades. Apelido vazio é ausente. O nascimento DEVE ser uma data civil existente e não futura, avaliada em America/Sao_Paulo, sem idade mínima.
-- **FR-005**: O e-mail DEVE conter parte local e domínio não vazios separados por um único `@`, sem espaços internos. Espaços nas extremidades DEVEM ser ignorados; identificação e login DEVEM ignorar diferenças de maiúsculas/minúsculas. O mesmo e-mail normalizado NÃO DEVE identificar contas diferentes.
-- **FR-006**: O telefone DEVE conter exatamente 11 dígitos ASCII, incluindo DDD. A interface DEVE aceitar somente números e completar a máscara `(DD) XXXXX-XXXX`, como `(61) 99843-3486`. A API DEVE aceitar os 11 dígitos ou o formato completo da máscara e normalizar para dígitos. Quantidades diferentes e caracteres inválidos DEVEM produzir orientação em português. Não há verificação por SMS.
+- **FR-005**: O e-mail DEVE conter parte local e domínio não vazios separados por um único `@`, sem espaços internos nem vírgulas. O domínio DEVE conter pelo menos um ponto separando segmentos não vazios (domínio e extensão); domínio sem extensão, ponto inicial/final ou pontos consecutivos DEVEM ser rejeitados. Aceitar extensões compostas como `.com.br`. Espaços nas extremidades DEVEM ser ignorados; identificação e login DEVEM ignorar diferenças de maiúsculas/minúsculas. O mesmo e-mail normalizado NÃO DEVE identificar contas diferentes. A validação é de formato, sem consulta DNS ou envio de confirmação.
+- **FR-006**: O telefone DEVE conter exatamente 11 dígitos ASCII, incluindo DDD. A interface DEVE apresentar o placeholder `(DDD) + Telefone`, aceitar somente números e completar a máscara `(DD) XXXXX-XXXX`, como `(61) 99843-3486`. Digitação e colagem DEVEM limitar a entrada aos primeiros 11 dígitos; os caracteres visuais da máscara não contam nesse limite. Menos de 11 dígitos DEVE impedir envio com orientação em português. A API DEVE aceitar os 11 dígitos ou o formato completo da máscara e normalizar para dígitos; DEVE rejeitar entradas excedentes ou caracteres inválidos em chamadas diretas. Não há verificação por SMS.
 - **FR-007**: A senha DEVE conter de 12 a 128 caracteres, pelo menos uma letra maiúscula, uma minúscula, um dígito de `0` a `9` e um símbolo que não seja letra, dígito ou espaço. Para comprimento, cada ponto de código Unicode conta como um caractere. A interface DEVE informar os critérios antes do envio e identificar os não atendidos. Espaços são permitidos, contam no comprimento e não satisfazem o requisito de símbolo. A senha DEVE ser preservada exatamente para autenticação, ocultada por padrão no preenchimento e nunca armazenada de forma recuperável nem exposta em logs ou respostas.
 - **FR-008**: O cadastro DEVE permitir novos titulares mesmo com outros cadastros completos ou legados. Antes da gravação, DEVE pesquisar o e-mail normalizado; no envio de e-mail já registrado, rejeitar o cadastro e informar em português que esse e-mail já possui login. A persistência DEVE garantir unicidade inclusive em concorrência, sem alterar dados existentes. Cadastro, credencial e auditoria DEVEM ser atômicos. E-mails diferentes criam titulares independentes.
 - **FR-009**: Após concluir o cadastro, o sistema DEVE autenticar exclusivamente pelo e-mail e senha definidos. Nome completo, apelido e antigo nome de acesso NÃO DEVEM funcionar como identificadores alternativos. Credenciais inválidas DEVEM produzir a mesma mensagem genérica, sem conceder sessão.

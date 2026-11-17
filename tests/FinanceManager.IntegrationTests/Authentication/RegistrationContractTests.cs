@@ -22,7 +22,7 @@ public sealed class RegistrationContractTests
         await using var factory = new FinanceManagerApiFactory(database.ConnectionString);
         using var client = factory.CreateHttpsClient();
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
-        var body = new Dictionary<string, string> { ["fullName"] = "Pessoa", ["birthDate"] = "1990-01-01", ["email"] = "a@b", ["phoneNumber"] = "11999999999", ["password"] = "SenhaValida!123", ["confirmPassword"] = "SenhaValida!123" };
+        var body = new Dictionary<string, string> { ["fullName"] = "Pessoa", ["birthDate"] = "1990-01-01", ["email"] = "a@b.test", ["phoneNumber"] = "11999999999", ["password"] = "SenhaValida!123", ["confirmPassword"] = "SenhaValida!123" };
         body.Remove(missing);
         using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, body, token);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

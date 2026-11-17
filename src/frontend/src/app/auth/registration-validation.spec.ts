@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { passwordCriteria, validateRegistration } from './registration-validation';
 
 describe('registration validation', () => {
-  const valid = { fullName: 'Pessoa', nickname: '', birthDate: '1990-01-01', email: 'a@b', phoneNumber: '11999999999', password: 'SenhaValida!123', confirmPassword: 'SenhaValida!123' };
+  const valid = { fullName: 'Pessoa', nickname: '', birthDate: '1990-01-01', email: 'a@b.test', phoneNumber: '11999999999', password: 'SenhaValida!123', confirmPassword: 'SenhaValida!123' };
+  it('requires non-empty domain and extension in the email', () => {
+    for (const email of ['teste@gmail', 'teste@dominio.', 'teste@.com', 'teste@dominio..com', 'enderecoEmail@dominio.com,br'])
+      expect(validateRegistration({ ...valid, email }, '2026-11-17')['email']).toBeTruthy();
+    for (const email of ['enderecoEmail@dominio.com', 'enderecoEmail@dominio.com.br'])
+      expect(validateRegistration({ ...valid, email }, '2026-11-17')['email']).toBeUndefined();
+  });
   it('accepts optional nickname and valid fields', () => expect(validateRegistration(valid, '2026-11-12')).toEqual({}));
   it('rejects invalid required fields and dates', () => {
     const errors = validateRegistration({ ...valid, fullName: ' ', birthDate: '2026-02-31', email: 'a@@b', phoneNumber: '123', password: 'curta' }, '2026-11-12');

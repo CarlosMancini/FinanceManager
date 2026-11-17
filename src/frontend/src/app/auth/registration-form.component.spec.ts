@@ -4,13 +4,15 @@ import { RegistrationFormComponent } from './registration-form.component';
 import { formatPhone, validateRegistration } from './registration-validation';
 
 describe('RegistrationFormComponent', () => {
-  it('masks digit input and pastes while preserving excess digits for validation', async () => {
+  it('masks digit input and caps typing and pastes at eleven digits', async () => {
     const fixture = TestBed.createComponent(RegistrationFormComponent);
-    const data = { fullName: 'Pessoa', nickname: '', birthDate: '1990-01-01', email: 'a@b', phoneNumber: '', password: 'SenhaValida!123', confirmPassword: 'SenhaValida!123' };
+    const data = { fullName: 'Pessoa', nickname: '', birthDate: '1990-01-01', email: 'a@b.test', phoneNumber: '', password: 'SenhaValida!123', confirmPassword: 'SenhaValida!123' };
     fixture.componentRef.setInput('data', data);
     fixture.detectChanges();
     await fixture.whenStable();
     const input: HTMLInputElement = fixture.nativeElement.querySelector('[name="phoneNumber"]');
+    expect(input.placeholder).toBe('(DDD) + Telefone');
+    expect(input.maxLength).toBe(15);
     input.value = '61998433486'; input.dispatchEvent(new Event('input')); fixture.detectChanges();
     await fixture.whenStable(); fixture.detectChanges();
     expect(input.value).toBe('(61) 99843-3486');
@@ -18,7 +20,12 @@ describe('RegistrationFormComponent', () => {
     const letter = new KeyboardEvent('keydown', { key: 'a', cancelable: true });
     input.dispatchEvent(letter); expect(letter.defaultPrevented).toBe(true);
     expect(formatPhone('abc(61) 99843-3486')).toBe('(61) 99843-3486');
-    data.phoneNumber = formatPhone('619984334860');
+    input.value = '619984334860999'; input.dispatchEvent(new Event('input')); fixture.detectChanges();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(input.value).toBe('(61) 99843-3486');
+    expect(data.phoneNumber.replace(/[^0-9]/g, '')).toHaveLength(11);
+    expect(formatPhone('619984334860999')).toBe('(61) 99843-3486');
+    data.phoneNumber = formatPhone('6199843348');
     expect(validateRegistration(data, '2026-11-16')['phoneNumber']).toBeTruthy();
   });
 

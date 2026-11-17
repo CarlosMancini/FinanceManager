@@ -11,7 +11,7 @@ Ampliar o `Owner` Identity existente; regras de perfil no domínio, coordenaçã
 | `FullName` | nvarchar(max), obrigatório quando concluído; trim externo, preservar grafia. |
 | `Nickname` | nvarchar(max) opcional; trim externo, vazio vira null. |
 | `BirthDate` | date/DateOnly, obrigatório quando concluído; existente, não futuro em America/Sao_Paulo via relógio injetável, sem idade mínima. |
-| `Email`, `NormalizedEmail` | nvarchar(max), obrigatórios quando concluído; um @ com partes não vazias, sem espaços internos; trim e caixa invariável. Comparação ordinal/collation binária coerente. |
+| `Email`, `NormalizedEmail` | nvarchar(max), obrigatórios quando concluído; um @ com partes não vazias, sem espaços internos ou vírgulas; domínio com ao menos um ponto e segmentos não vazios, incluindo extensão; trim e caixa invariável. Comparação ordinal/collation binária coerente. |
 | `PhoneNumber` | Campo Identity, exatamente 11 dígitos, entrada bruta ou máscara completa `(DD) XXXXX-XXXX`; rejeitar outras entradas. |
 | `RegistrationCompletedAtUtc` | datetimeoffset opcional. Null = legado incompleto; preenchido = definitivo. |
 | `UserName`, `NormalizedUserName` | Campos internos Identity; novos usam ID técnico, legados mantêm nome para prova somente enquanto incompletos. |

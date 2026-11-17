@@ -15,7 +15,7 @@ public sealed class OwnerRegistrationServiceTests
     {
         var store = new Store();
         var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null,
-            new DateOnly(1990, 1, 1), "a@b", "61998433486", "SenhaValida!123", TestContext.Current.CancellationToken, confirmation);
+            new DateOnly(1990, 1, 1), "a@b.test", "61998433486", "SenhaValida!123", TestContext.Current.CancellationToken, confirmation);
         Assert.Equal(RegistrationOutcome.InvalidProfile, result.Outcome);
         Assert.Contains("confirmPassword", result.Errors!.Keys);
         Assert.Null(store.Profile);
@@ -32,10 +32,10 @@ public sealed class OwnerRegistrationServiceTests
     }
 
     [Theory]
-    [InlineData("", "a@b", "1199999999", "SenhaValida!123")]
+    [InlineData("", "a@b.test", "1199999999", "SenhaValida!123")]
     [InlineData("Pessoa", "invalido", "1199999999", "SenhaValida!123")]
-    [InlineData("Pessoa", "a@b", "123", "SenhaValida!123")]
-    [InlineData("Pessoa", "a@b", "1199999999", "curta")]
+    [InlineData("Pessoa", "a@b.test", "123", "SenhaValida!123")]
+    [InlineData("Pessoa", "a@b.test", "1199999999", "curta")]
     public async Task InvalidInputDoesNotReachStore(string name, string email, string phone, string password)
     {
         var store = new Store();
@@ -50,8 +50,8 @@ public sealed class OwnerRegistrationServiceTests
         var token = TestContext.Current.CancellationToken;
         var store = new Store();
         var service = new OwnerRegistrationService(store, TimeProvider.System);
-        var missing = await service.RegisterAsync("Pessoa", null, null, "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
-        var future = await service.RegisterAsync("Pessoa", null, DateOnly.MaxValue, "a@b", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
+        var missing = await service.RegisterAsync("Pessoa", null, null, "a@b.test", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
+        var future = await service.RegisterAsync("Pessoa", null, DateOnly.MaxValue, "a@b.test", "11999999999", "SenhaValida!123", token, "SenhaValida!123");
         Assert.Equal(RegistrationOutcome.InvalidProfile, missing.Outcome);
         Assert.Equal(RegistrationOutcome.InvalidProfile, future.Outcome);
         Assert.Null(store.Profile);
@@ -74,7 +74,7 @@ public sealed class OwnerRegistrationServiceTests
     public async Task PreservesStoreOutcomeWithoutCreatingSession(RegistrationOutcome outcome)
     {
         var store = new Store { Outcome = outcome };
-        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null, new DateOnly(1990, 1, 1), "a@b", "11999999999", "SenhaValida!123", TestContext.Current.CancellationToken, "SenhaValida!123");
+        var result = await new OwnerRegistrationService(store, TimeProvider.System).RegisterAsync("Pessoa", null, new DateOnly(1990, 1, 1), "a@b.test", "11999999999", "SenhaValida!123", TestContext.Current.CancellationToken, "SenhaValida!123");
         Assert.Equal(outcome, result.Outcome);
     }
 

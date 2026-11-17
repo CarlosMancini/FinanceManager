@@ -14,6 +14,27 @@ public sealed class MultipleUserRegistrationTests
         new { fullName = "Pessoa Sintética", birthDate = "1990-01-01", email, phoneNumber = phone, password = Password, confirmPassword = confirmation };
 
     [Theory]
+    [InlineData("teste@gmail")]
+    [InlineData("teste@dominio.")]
+    [InlineData("teste@.com")]
+    [InlineData("teste@dominio..com")]
+    [InlineData("enderecoEmail@dominio.com,br")]
+    public async Task ApiRejectsEmailWithoutCompleteDomain(string email)
+    {
+        var token = TestContext.Current.CancellationToken;
+        await using var scenario = await RegistrationScenario.EmptyAsync();
+        await using var factory = new FinanceManagerApiFactory(scenario.Database.ConnectionString);
+        using var client = factory.CreateHttpsClient();
+        var csrf = await AuthTestClient.GetCsrfAsync(client, token);
+        using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, Profile(email), token);
+        await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("email", out _));
+        await using var db = scenario.Database.CreateContext();
+        Assert.Empty(await db.Users.ToListAsync(token));
+    }
+
+    [Theory]
     [InlineData(null, "61998433486", "confirmPassword")]
     [InlineData("OutraSenha!123", "61998433486", "confirmPassword")]
     [InlineData(Password, "6199843348", "phoneNumber")]
@@ -26,7 +47,7 @@ public sealed class MultipleUserRegistrationTests
         await using var factory = new FinanceManagerApiFactory(scenario.Database.ConnectionString);
         using var client = factory.CreateHttpsClient();
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
-        using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, Profile("a@b", confirmation, phone), token);
+        using var response = await AuthTestClient.PostAsync(client, "/api/auth/register", csrf, Profile("a@b.test", confirmation, phone), token);
         await AuthTestClient.AssertProblemAsync(response, 400, "VALIDATION_FAILED", token);
         Assert.Contains(field, await response.Content.ReadAsStringAsync(token));
         await using var db = scenario.Database.CreateContext();

@@ -113,4 +113,10 @@ Executar [quickstart.md](quickstart.md) após implementação; registrar evidên
 
 ## Complexity Tracking
 
+### Revisão autorizada de 2026-11-17
+
+- Reutilizar o domínio `RegistrationProfile` e a validação TypeScript do formulário compartilhado entre cadastro e conclusão. Exigir ao menos dois segmentos não vazios no domínio do e-mail, separados por pontos; rejeitar vírgulas, pontos consecutivos e domínio sem extensão. Preservar trim, normalização, e-mails longos, unicidade e autenticação de contas existentes; sem consulta DNS.
+- Telefone: placeholder literal `(DDD) + Telefone`; limitar números extraídos de digitação/colagem a 11 e manter a máscara. O atributo maxlength é 15 posições da máscara, correspondente aos 11 dígitos, e não 11 posições visuais. Atualizar também o valor DOM quando a tentativa excedente produz o mesmo modelo anterior. A API continua rejeitando mais/menos de 11 dígitos, sem truncar payloads diretos.
+- Atualizar fixtures que tratavam `a@b` como válido para domínio com extensão. Adicionar regressões xUnit, HTTP e Angular para `teste@gmail`, domínio com segmentos vazios, vírgula, `.com` e `.com.br`, entrada incompleta e limite de telefone. Sem alteração do esquema SQL ou novas dependências.
+
 Sem exceções constitucionais. A autorização restrita atende FR-015–017 e não substitui a sessão financeira.

@@ -1,5 +1,7 @@
 # Pesquisa e decisões · 004
 
+Revisão de 2026-11-17: o responsável confirmou `.com.br` com pontos e rejeição de vírgulas. Validação simples exige domínio e extensão com segmentos não vazios, no domínio C# e no formulário TypeScript, sem DNS. Telefone mantém os primeiros 11 dígitos na interface, com placeholder `(DDD) + Telefone`; maxlength de 15 posições inclui os símbolos da máscara. API continua rejeitando excedentes. Estas decisões substituem os trechos históricos sobre formato mínimo de e-mail e entrada excedente do telefone; não exigem migração nem dependências novas.
+
 Revisão aprovada em 2026-11-16: decisões sobre singleton e telefone abaixo são históricas e substituídas pelo plano e modelo revisados. Nova migração remove singleton e cria índice único de hash do e-mail normalizado, preservando e-mails longos. Consulta prévia melhora erro de duplicidade, índice SQL decide concorrência. Sem novos pacotes. Confirmação de senha é transitória e validada pela mesma política no servidor e cliente.
 
 Pesquisa em 2026-11-12, baseada na spec esclarecida, código existente e documentação oficial. Não restam decisões técnicas bloqueantes.

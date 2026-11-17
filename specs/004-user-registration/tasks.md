@@ -213,3 +213,9 @@ Solicitação e emenda 2.0.0 aprovadas pelo responsável; esta fase substitui as
 
 - [X] T060 Remover consulta de disponibilidade ao abrir `/register` e após erro de envio; apresentar imediatamente o formulário e manter link legado opcional. Validar ausência de consulta inicial e erro de e-mail somente após envio. (FR-002/008/014)
 - [X] T061 Validar logout/login alternados de usuários diferentes no mesmo cliente e conferir que a instalação local usa a imagem atualizada; atualizar com backup, preservando banco e chaves, e registrar evidências. (FR-009/012/016)
+
+## Revisão de 2026-11-17 — formato de e-mail e limite de telefone
+
+- [X] T062 Atualizar FR-005/006, plano e contratos para exigir domínio com extensão e limitar entrada de telefone a 11 dígitos, com placeholder `(DDD) + Telefone`. Registrar esclarecimento sobre o exemplo de domínio composto. (SC-002)
+- [X] T063 Adicionar regressões de e-mail no domínio/API/Angular e de digitação/colagem limitada do telefone; implementar regras equivalentes nas camadas e preservar validação da API para entradas excedentes. (FR-005/006/014)
+- [X] T064 Executar testes relevantes, builds e verificar a instalação local atualizada; registrar evidências sem alterar a pendência da avaliação humana. (SC-002/003)

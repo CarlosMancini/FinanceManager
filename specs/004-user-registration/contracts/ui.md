@@ -25,7 +25,7 @@ Para entrada autenticada: nenhuma conta financeira → cadastro de conta; alguma
 - Em resposta perdida, manter formulário e orientar nova tentativa ou login. Estado global não comprova sucesso individual, pois outros usuários podem existir. A resposta de conflito/replay do servidor orienta a repetição sem sobrescrever dados.
 - Guards e restauração distinguem sessão financeira válida de cadastro pendente. Interceptor cobre também `/api/bills`; erros de prova/conclusão não entram num ciclo de redirecionamento genérico de sessão expirada.
 
-Telefone aceita somente dígitos na edição/colagem e aplica máscara progressiva `(DD) XXXXX-XXXX`; comprimento diferente de 11 dígitos gera erro, sem truncar silenciosamente excedentes. Confirmação de senha é oculta, obrigatória e deve coincidir exatamente com senha válida. Descartar ambos os campos secretos ao sair/sucesso.
+Telefone mostra o placeholder `(DDD) + Telefone`, aceita somente dígitos na edição/colagem e aplica máscara progressiva `(DD) XXXXX-XXXX`. A entrada retém no máximo os primeiros 11 dígitos; caracteres da máscara não contam no limite (15 posições visuais). Telefone incompleto gera erro ao enviar. A API rejeita payload excedente. E-mail exige domínio e extensão separados por ponto, com segmentos não vazios; `.com` e `.com.br` são aceitos, `teste@gmail`, pontos consecutivos e vírgula são rejeitados antes do envio. Confirmação de senha é oculta, obrigatória e deve coincidir exatamente com senha válida. Descartar ambos os campos secretos ao sair/sucesso.
 
 ## Regressões obrigatórias
 

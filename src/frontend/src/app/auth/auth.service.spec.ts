@@ -41,7 +41,7 @@ describe('AuthService', () => {
   it('expires on financial 401 including bills, but not on a failed login', async () => {
     const { auth, http, router } = setup();
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    const failed = auth.login('a@b', 'senha').catch(() => undefined);
+    const failed = auth.login('a@b.test', 'senha').catch(() => undefined);
     http.expectOne('/api/auth/csrf').flush(null); await new Promise(resolve => setTimeout(resolve, 0));
     http.expectOne('/api/auth/login').flush({}, { status: 401, statusText: 'Unauthorized' });
     await failed; expect(navigate).not.toHaveBeenCalled();
