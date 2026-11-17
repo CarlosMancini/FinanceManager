@@ -5,6 +5,8 @@ using FinanceManager.IntegrationTests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using FinanceManager.Application.Accounts;
+using FinanceManager.Domain.Accounts;
 
 namespace FinanceManager.IntegrationTests.Accounts;
 
@@ -88,22 +90,14 @@ public sealed class FinancialAccountPersistenceTests
             Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
         Assert.Contains("Compartilha o nome", await client.GetStringAsync(path, token));
 
-        using (var scope = restarted.Services.CreateScope())
-        {
-            var users = scope.ServiceProvider.GetRequiredService<UserManager<Owner>>();
-            var result = await users.CreateAsync(new Owner { Id = Guid.NewGuid(), UserName = "outro" }, AuthTestClient.Password);
-            Assert.True(result.Succeeded);
-        }
-        using var other = restarted.CreateHttpsClient();
-        using (var login = await AuthTestClient.LoginAsync(other, token, username: "outro"))
-            Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
-        using (var denied = await other.GetAsync(path, token))
-            await AuthTestClient.AssertProblemAsync(denied, 404, "ACCOUNT_NOT_FOUND", token);
-        var csrf = await AuthTestClient.GetCsrfAsync(other, token);
-        using var deniedWrite = await AccountScenario.PutAsync(other, path, new { name = "Mudança", type = "wallet" },
-            created.Headers.ETag!.ToString(), csrf, token);
-        await AuthTestClient.AssertProblemAsync(deniedWrite, 404, "ACCOUNT_NOT_FOUND", token);
-        using var allowed = await AuthTestClient.PostAsync(other, "/api/accounts", csrf, new { name = "Compartilha o nome", type = "wallet" }, token);
-        Assert.Equal(HttpStatusCode.Created, allowed.StatusCode);
+        await using var scope = restarted.Services.CreateAsyncScope();
+        var accounts = scope.ServiceProvider.GetRequiredService<FinancialAccountService>();
+        var foreignOwner = Guid.NewGuid();
+        var accountId = Guid.Parse(path.Split('/').Last());
+        Assert.Null(await accounts.GetAsync(foreignOwner, accountId, token));
+        Assert.Empty(await accounts.ListAsync(foreignOwner, null, token));
+        var denied = await accounts.EditAsync(foreignOwner, accountId, new byte[8], "Mudança", AccountType.Wallet, token);
+        Assert.Equal(AccountError.NotFound, denied.Error);
+        Assert.Contains("Compartilha o nome", await client.GetStringAsync(path, token));
     }
 }

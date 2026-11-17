@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using FinanceManager.Api.Authentication;
-using FinanceManager.Api.Commands;
 using FinanceManager.Api.Http;
 using FinanceManager.Application.Authentication;
 using FinanceManager.Infrastructure;
@@ -26,7 +25,14 @@ builder.WebHost.ConfigureKestrel(options =>
         ["Certificates:Default:Path"] = certificate["Path"],
         ["Certificates:Default:Password"] = certificate["Password"]
     }).Build());
-    options.ListenLocalhost(endpoint.Port, listen => listen.UseHttps());
+    if (builder.Configuration.GetValue<bool>("Container:Enabled"))
+    {
+        options.Listen(System.Net.IPAddress.Any, endpoint.Port, listen => listen.UseHttps());
+    }
+    else
+    {
+        options.ListenLocalhost(endpoint.Port, listen => listen.UseHttps());
+    }
 });
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
@@ -36,15 +42,16 @@ builder.AddOwnerAuthentication();
 builder.Services.AddControllers(options => options.Filters.AddService<SessionAdmissionFilter>())
     .AddJsonOptions(options => options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)
     .ConfigureApiBehaviorOptions(options =>
-        options.InvalidModelStateResponseFactory = _ =>
-            ApiProblems.Result(400, "VALIDATION_FAILED", "Confira os dados informados."));
+        options.InvalidModelStateResponseFactory = context =>
+            ApiProblems.Validation(context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .ToDictionary(entry => entry.Key, _ => new[] { "Confira o valor informado." })));
 
 await using var app = builder.Build();
 if (provisionOwner)
 {
-    await using var scope = app.Services.CreateAsyncScope();
-    Environment.ExitCode = await ProvisionOwnerCommand.RunAsync(
-        scope.ServiceProvider.GetRequiredService<OwnerAccessService>(), CancellationToken.None);
+    Console.Error.WriteLine("Crie a conta pela interface do aplicativo.");
+    Environment.ExitCode = 1;
     return;
 }
 

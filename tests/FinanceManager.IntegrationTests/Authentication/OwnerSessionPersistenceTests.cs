@@ -54,9 +54,9 @@ public sealed class OwnerSessionPersistenceTests
     }
 
     [Theory]
-    [InlineData("primeiro")]
-    [InlineData("segundo")]
-    public async Task ConcurrentProvisioningCreatesExactlyOneOwner(string secondUsername)
+    [InlineData("primeiro@example.test")]
+    [InlineData("segundo@example.test")]
+    public async Task ConcurrentRegistrationEnforcesOneLoginPerEmail(string secondEmail)
     {
         var token = TestContext.Current.CancellationToken;
         await using var database = new SqlServerTestDatabase();
@@ -65,10 +65,11 @@ public sealed class OwnerSessionPersistenceTests
         using var first = factory.Services.CreateScope();
         using var second = factory.Services.CreateScope();
         var results = await Task.WhenAll(
-            first.ServiceProvider.GetRequiredService<OwnerAccessService>().ProvisionAsync("primeiro", AuthTestClient.Password, token),
-            second.ServiceProvider.GetRequiredService<OwnerAccessService>().ProvisionAsync(secondUsername, AuthTestClient.Password, token));
-        Assert.Contains(ProvisionOutcome.Created, results);
-        Assert.Contains(ProvisionOutcome.AlreadyProvisioned, results);
+            first.ServiceProvider.GetRequiredService<OwnerRegistrationService>().RegisterAsync("Primeiro", null, new DateOnly(1990, 1, 1), "primeiro@example.test", "11999999999", AuthTestClient.Password, token, AuthTestClient.Password),
+            second.ServiceProvider.GetRequiredService<OwnerRegistrationService>().RegisterAsync("Segundo", null, new DateOnly(1990, 1, 1), secondEmail, "11999999999", AuthTestClient.Password, token, AuthTestClient.Password));
+        Assert.Contains(results, result => result.Outcome == RegistrationOutcome.Succeeded);
+        if (secondEmail == "primeiro@example.test") Assert.Single(results, result => result.Outcome == RegistrationOutcome.AlreadyRegistered);
+        else Assert.All(results, result => Assert.Equal(RegistrationOutcome.Succeeded, result.Outcome));
     }
 
     [Fact]

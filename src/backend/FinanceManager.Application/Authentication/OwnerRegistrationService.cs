@@ -1,0 +1,45 @@
+using FinanceManager.Domain.Authentication;
+
+namespace FinanceManager.Application.Authentication;
+
+public sealed class OwnerRegistrationService(IOwnerRegistrationStore store, TimeProvider clock)
+{
+    public Task<RegistrationState> GetStateAsync(CancellationToken cancellationToken) => store.GetStateAsync(cancellationToken);
+
+    public async Task<RegistrationResult> RegisterAsync(string? fullName, string? nickname, DateOnly? birthDate,
+        string? email, string? phoneNumber, string? password, CancellationToken cancellationToken, string? confirmPassword = null)
+    {
+        var (profile, errors) = Validate(fullName, nickname, birthDate, email, phoneNumber, password, confirmPassword);
+        if (errors.Count > 0) return new(RegistrationOutcome.InvalidProfile, errors);
+        return await store.RegisterAsync(profile!, password!, cancellationToken);
+    }
+
+    internal (RegistrationProfile? Profile, Dictionary<string, string[]> Errors) Validate(string? fullName, string? nickname,
+        DateOnly? birthDate, string? email, string? phoneNumber, string? password, string? confirmPassword)
+    {
+        var errors = new Dictionary<string, string[]>();
+        RegistrationProfile? profile = null;
+        try
+        {
+            var zone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+            var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).DateTime);
+            profile = RegistrationProfile.Create(fullName, nickname, birthDate, email, phoneNumber, today);
+        }
+        catch (ArgumentException error)
+        {
+            errors[error.ParamName ?? "profile"] = [error.ParamName switch
+            {
+                "fullName" => "Informe o nome completo.",
+                "birthDate" => "Informe uma data de nascimento válida.",
+                "email" => "Informe um e-mail válido.",
+                "phoneNumber" => "Informe um telefone com DDD e 11 dígitos.",
+                _ => "Confira os dados informados."
+            }];
+        }
+        if (!RegistrationPasswordPolicy.Evaluate(password).IsValid)
+            errors["password"] = ["Confira os critérios da senha."];
+        if (!RegistrationPasswordPolicy.Evaluate(confirmPassword).IsValid || password != confirmPassword)
+            errors["confirmPassword"] = ["Confirme a senha com um valor válido e idêntico à senha informada."];
+        return (profile, errors);
+    }
+}

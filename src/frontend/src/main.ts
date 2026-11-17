@@ -12,7 +12,7 @@ import { AuthService, sessionExpiredInterceptor } from './app/auth/auth.service'
     <main>
       <header class="header">
         <h1>FinanceManager</h1>
-        @if (auth.username()) {
+        @if (auth.email()) {
           <nav class="actions"><a routerLink="/transactions">Movimentações</a><a routerLink="/bills">Contas a pagar</a><a routerLink="/accounts">Contas</a><button type="button" (click)="logout()" [disabled]="busy()">Sair</button></nav>
         }
       </header>
@@ -32,7 +32,7 @@ class AppComponent {
     try {
       await this.auth.logout();
     } catch {
-      if (this.auth.username()) this.error.set('Não foi possível sair. Tente novamente.');
+      if (this.auth.email()) this.error.set('Não foi possível sair. Tente novamente.');
     } finally {
       this.busy.set(false);
     }
