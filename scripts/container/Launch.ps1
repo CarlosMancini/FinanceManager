@@ -113,14 +113,76 @@ try {
     Import-ContainerConfiguration -Path $config
     if ($env:COMPOSE_PROJECT_NAME -notmatch '^[a-z0-9][a-z0-9_-]*$') { throw 'Configure um nome válido para COMPOSE_PROJECT_NAME.' }
     $compose = Join-Path $root 'compose.yaml'
-    $migration = & docker compose -p $env:COMPOSE_PROJECT_NAME -f $compose ps --all --quiet migrate
+    $imageName = "financemanager-local-$($env:COMPOSE_PROJECT_NAME)"
+    $newImage = "${imageName}:$([guid]::NewGuid().ToString('N'))"
+    Write-Output 'Compilando a imagem da aplicação a partir dos arquivos locais...'
+    & docker build --tag $newImage $root
+    if ($LASTEXITCODE -ne 0) { throw 'Não foi possível compilar a imagem local da aplicação.' }
+    $newImageId = & docker image inspect --format '{{.Id}}' $newImage
+    if ($LASTEXITCODE -ne 0 -or $newImageId -notmatch '^sha256:[a-f0-9]{64}$') { throw 'Não foi possível identificar a imagem compilada.' }
+    $appId = & docker compose -p $env:COMPOSE_PROJECT_NAME -f $compose ps --all --quiet app
     if ($LASTEXITCODE -ne 0) { throw 'Não foi possível verificar o estado da instalação.' }
-    if ([string]::IsNullOrWhiteSpace(($migration -join ''))) {
-        & (Join-Path $PSScriptRoot 'Install.ps1') -ConfigurationPath $config
-        if ($LASTEXITCODE -ne 0) { exit 1 }
+    $installedImageId = if (-not [string]::IsNullOrWhiteSpace(($appId -join ''))) {
+        & docker inspect --format '{{.Image}}' $appId
+        if ($LASTEXITCODE -ne 0) { throw 'Não foi possível identificar a imagem instalada.' }
+    } else { $null }
+    if ($newImageId -ne $installedImageId) {
+        $configHash = (Get-FileHash -LiteralPath $config).Hash
+        $lines = @(Get-Content -LiteralPath $config)
+        if (@($lines | Where-Object { $_ -match '^APP_IMAGE=' }).Count -ne 1) { throw 'Configure exatamente uma variável APP_IMAGE no arquivo .env.' }
+        $lines = @($lines | ForEach-Object { if ($_ -match '^APP_IMAGE=') { "APP_IMAGE=$newImage" } else { $_ } })
+        $temporaryConfig = Join-Path $root ('.env.' + [guid]::NewGuid().ToString('N') + '.tmp')
+        try {
+            $file = [IO.File]::Open($temporaryConfig, [IO.FileMode]::CreateNew)
+            $file.Dispose()
+            Protect-ContainerBackupFile -Path $temporaryConfig
+            [IO.File]::WriteAllLines($temporaryConfig, $lines)
+            if ((Get-FileHash -LiteralPath $config).Hash -ne $configHash) { throw 'A configuração foi alterada durante a preparação.' }
+            if ($installedImageId) {
+                & (Join-Path $PSScriptRoot 'Update.ps1') -ConfigurationPath $config -LocalAppImage $newImage
+            } else {
+                & (Join-Path $PSScriptRoot 'Install.ps1') -ConfigurationPath $config -LocalAppImage $newImage
+            }
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            if ((Get-FileHash -LiteralPath $config).Hash -ne $configHash) { throw 'A configuração foi alterada durante a instalação. Restaure APP_IMAGE manualmente para a imagem instalada.' }
+            [IO.File]::Move($temporaryConfig, $config, $true)
+            Protect-ContainerBackupFile -Path $config
+        }
+        finally {
+            if (Test-Path -LiteralPath $temporaryConfig) { Remove-Item -LiteralPath $temporaryConfig -Force }
+        }
+    } else {
+        & docker image rm $newImage | Out-Null
     }
     & (Join-Path $PSScriptRoot 'Start.ps1') -ConfigurationPath $config
     if ($LASTEXITCODE -ne 0) { exit 1 }
+
+    # Conserve as imagens referenciadas pelos backups e por outros contêineres.
+    try {
+        $protectedImages = @($newImageId)
+        if (Test-Path -LiteralPath $env:BACKUP_DIRECTORY -PathType Container) {
+            foreach ($backup in @(Get-ChildItem -LiteralPath $env:BACKUP_DIRECTORY -Filter '*.bak' -File)) {
+                $metadataPath = "$($backup.FullName).json"
+                if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) { throw 'Backup sem metadados.' }
+                $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+                if ($metadata.imageId -notmatch '^sha256:[a-f0-9]{64}$') { throw 'Metadados de backup inválidos.' }
+                $protectedImages += $metadata.imageId
+            }
+        }
+        $candidates = @(& docker image ls --format '{{.Repository}}:{{.Tag}}' --filter "reference=${imageName}:*")
+        if ($LASTEXITCODE -ne 0) { throw 'Não foi possível listar as imagens locais.' }
+        foreach ($candidate in $candidates) {
+            if ($candidate -notmatch "^$([regex]::Escape($imageName)):[a-f0-9]{32}$") { continue }
+            $candidateId = & docker image inspect --format '{{.Id}}' $candidate
+            if ($LASTEXITCODE -ne 0 -or $candidateId -in $protectedImages) { continue }
+            $users = @(& docker ps -aq --filter "ancestor=$candidateId")
+            if ($LASTEXITCODE -ne 0 -or $users.Count -gt 0) { continue }
+            & docker image rm $candidate | Out-Null
+        }
+    }
+    catch {
+        Write-Warning 'Não foi possível verificar quais imagens antigas podem ser removidas; elas foram preservadas.'
+    }
 }
 catch {
     Write-Error $_.Exception.Message

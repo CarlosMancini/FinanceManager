@@ -1,5 +1,6 @@
 param(
-    [string] $ConfigurationPath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) '.env')
+    [string] $ConfigurationPath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) '.env'),
+    [string] $LocalAppImage
 )
 
 $ErrorActionPreference = 'Stop'
@@ -7,10 +8,11 @@ $ErrorActionPreference = 'Stop'
 
 try {
     Import-ContainerConfiguration -Path $ConfigurationPath
+    if ($LocalAppImage) { $env:APP_IMAGE = $LocalAppImage }
     Assert-ContainerEnvironment
     Invoke-ContainerExclusive {
         $compose = Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'compose.yaml'
-        Receive-ContainerImages
+        Receive-ContainerImages -LocalAppImage:([bool]$LocalAppImage)
         $appId = & docker compose -p $env:COMPOSE_PROJECT_NAME -f $compose ps --all --quiet app
         if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($appId)) {
             throw 'Não foi encontrada uma instalação anterior para atualizar.'
