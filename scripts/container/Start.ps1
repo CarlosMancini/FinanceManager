@@ -9,6 +9,9 @@ try {
     if ($PSVersionTable.PSVersion -lt [version]'7.5') {
         throw 'Instale o PowerShell 7.5 ou superior.'
     }
+    if (-not (Test-Path -LiteralPath $ConfigurationPath -PathType Leaf)) {
+        throw 'Arquivo de configuração não encontrado. Para uma instalação nova, siga specs/005-container-installation/quickstart.md. Se já havia uma instalação, restaure o arquivo .env original.'
+    }
     Import-ContainerConfiguration -Path $ConfigurationPath
     Invoke-ContainerExclusive {
         $compose = Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'compose.yaml'
