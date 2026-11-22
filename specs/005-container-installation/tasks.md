@@ -25,7 +25,7 @@ description: "Tarefas para implementar e validar a instalação local em contêi
 
 - [X] T008 [US1] Implementar em `scripts/container/Install.ps1` a validação de credenciais e PFX, a obtenção de imagens e a inicialização em ordem. Após o SQL ficar saudável e antes da migração, provisionar o banco, as identidades e as permissões com a credencial administrativa. Permitir reexecução sem recriar o banco ou apagar dados. Usar credencial com permissão de esquema para o migrador e credencial limitada à operação para a API. Encerrar com falha se algum pré-requisito impedir o cadastro (FR-001, FR-002, FR-004, FR-005, FR-007).
 - [X] T009 [P] [US1] Disponibilizar manualmente em registro de teste a imagem inicial gerada pelo Dockerfile e registrar seu digest e a referência fixada do SQL Server em `specs/005-container-installation/quickstart.md` (FR-007). Depende de T006.
-- [ ] T010 [US1] Executar os casos de instalação limpa e configuração inválida em `specs/005-container-installation/quickstart.md`. Confirmar cadastro, HTTPS confiável, porta SQL sem publicação, recusa pela LAN e falha de configuração sem exposição de segredos. Usar volume SQL vazio e baixar a imagem inicial do registro em ambiente sem cópia local. Repetir a instalação com o mesmo volume e verificar que a credencial da API opera, mas tem uma alteração de esquema rejeitada. Verificar a mensagem para Engine abaixo de 28 e a recusa na LAN no ambiente suportado (SC-001, SC-004). Depende de T008 e T009.
+- [X] T010 [US1] Executar os casos de instalação limpa e configuração inválida em `specs/005-container-installation/quickstart.md`. Confirmar cadastro, HTTPS confiável, porta SQL sem publicação, recusa pela LAN e falha de configuração sem exposição de segredos. Usar volume SQL vazio e baixar a imagem inicial do registro em ambiente sem cópia local. Repetir a instalação com o mesmo volume e verificar que a credencial da API opera, mas tem uma alteração de esquema rejeitada. Verificar a mensagem para Engine abaixo de 28 e a recusa na LAN no ambiente suportado (SC-001, SC-004). Depende de T008 e T009.
 
 ## Fase 4 — US2 Preservação dos dados (P1)
 
@@ -46,7 +46,7 @@ description: "Tarefas para implementar e validar a instalação local em contêi
 ## Fase 6 — Verificação final
 
 - [X] T017 Atualizar `specs/005-container-installation/quickstart.md` com os comandos, pré-requisitos e configuração efetivamente usados para instalar, parar, atualizar e restaurar, incluindo download de imagem identificada (FR-007, FR-008).
-- [ ] T018 Executar os checks existentes de backend, integração SQL e Angular de `.github/workflows/ci.yml`. Registrar no `specs/005-container-installation/quickstart.md` os resultados e digests do piloto. Parar os serviços do piloto e verificar que foram encerrados. Depende de T010, T012, T016 e T017.
+- [X] T018 Executar os checks existentes de backend, integração SQL e Angular de `.github/workflows/ci.yml`. Registrar no `specs/005-container-installation/quickstart.md` os resultados e digests do piloto. Parar os serviços do piloto e verificar que foram encerrados. Depende de T010, T012, T016 e T017.
 
 ## Dependências e trabalho em paralelo
 
