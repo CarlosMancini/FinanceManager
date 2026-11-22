@@ -9,10 +9,12 @@ import { TransactionHistoryComponent } from './transactions/transaction-history.
 import { requireActiveAccount, requireAnyAccount } from './transactions/account-route.guard';
 import { BillListComponent } from './bills/bill-list.component';
 import { BillDetailComponent } from './bills/bill-detail.component';
+import { OwnerProfileComponent } from './auth/owner-profile.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'transactions', pathMatch: 'full' },
   { path: 'accounts', component: AccountsComponent, canActivate: [requireSession] },
+  { path: 'profile', component: OwnerProfileComponent, canActivate: [requireSession] },
   { path: 'bills', component: BillListComponent, canActivate: [requireSession] },
   { path: 'bills/:id', component: BillDetailComponent, canActivate: [requireSession] },
   { path: 'transactions', component: TransactionHistoryComponent, canActivate: [requireSession, requireAnyAccount] },

@@ -41,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<OwnerAccessService>();
         services.AddScoped<IOwnerRegistrationStore, SqlOwnerRegistrationStore>();
         services.AddScoped<OwnerRegistrationService>();
+        services.AddScoped<IOwnerProfileStore, SqlOwnerProfileStore>();
+        services.AddScoped<OwnerProfileService>();
         services.AddScoped<OwnerRegistrationTransitionService>();
         services.AddSingleton<OwnerTicketStore>();
         services.AddScoped<IFinancialAccountRepository, SqlFinancialAccountRepository>();
