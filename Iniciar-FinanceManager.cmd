@@ -10,7 +10,7 @@ if errorlevel 1 (
         exit /b 1
     )
 )
-"%PWSH_EXE%" -NoProfile -File "%~dp0scripts\container\Start.ps1"
+"%PWSH_EXE%" -NoProfile -File "%~dp0scripts\container\Launch.ps1"
 if errorlevel 1 (
     echo.
     echo Nao foi possivel iniciar o FinanceManager.

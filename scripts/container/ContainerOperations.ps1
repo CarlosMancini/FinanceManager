@@ -116,15 +116,19 @@ function Protect-ContainerBackupFile {
 
     $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
     $system = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-18')
-    $acl = [System.Security.AccessControl.FileSecurity]::new()
+    $file = [System.IO.FileInfo]::new($Path)
+    $acl = [System.IO.FileSystemAclExtensions]::GetAccessControl($file, [System.Security.AccessControl.AccessControlSections]::Access)
     $acl.SetAccessRuleProtection($true, $false)
+    foreach ($rule in @($acl.GetAccessRules($true, $false, [System.Security.Principal.SecurityIdentifier]))) {
+        [void] $acl.RemoveAccessRuleSpecific($rule)
+    }
     foreach ($principal in @($identity, $system)) {
         $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
             $principal, 'FullControl', 'Allow')
         $acl.AddAccessRule($rule)
     }
-    Set-Acl -LiteralPath $Path -AclObject $acl -ErrorAction Stop
-    $actual = Get-Acl -LiteralPath $Path -ErrorAction Stop
+    [System.IO.FileSystemAclExtensions]::SetAccessControl($file, $acl)
+    $actual = [System.IO.FileSystemAclExtensions]::GetAccessControl($file, [System.Security.AccessControl.AccessControlSections]::Access)
     $rules = $actual.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
     if (-not $actual.AreAccessRulesProtected -or
         @($rules | Where-Object { $_.IdentityReference -ne $identity -and $_.IdentityReference -ne $system }).Count -gt 0) {
