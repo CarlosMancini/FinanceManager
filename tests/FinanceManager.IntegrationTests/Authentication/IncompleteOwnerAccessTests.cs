@@ -45,7 +45,7 @@ public sealed class IncompleteOwnerAccessTests
         Assert.Null(await tickets.RetrieveAsync(scenario.SessionId.ToString(), token));
         Assert.False(await sessions.AdmitAsync(scenario.SessionId, factory.Clock.GetUtcNow(), token));
         await Assert.ThrowsAsync<InvalidOperationException>(() => sessions.CreateAsync(new OwnerSession(scenario.OwnerId, factory.Clock.GetUtcNow()), token));
-        foreach (var route in new[] { "/api/accounts", "/api/transactions", "/api/bills" })
+        foreach (var route in new[] { "/api/accounts", "/api/transactions", "/api/bills", "/api/auth/profile" })
         {
             using var response = await client.GetAsync(route, token);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

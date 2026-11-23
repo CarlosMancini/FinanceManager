@@ -63,7 +63,7 @@ public sealed class OwnerProfileContractTests
             await Task.Run(() => gate.SignalAndWait(token), token);
             using var request = new HttpRequestMessage(HttpMethod.Patch, "/api/auth/profile");
             request.Headers.Add("X-XSRF-TOKEN", csrf);
-            request.Content = JsonContent.Create(new { changes = new { fullName = value }, originalValues = new { fullName = "Pessoa de Teste" } });
+            request.Content = JsonContent.Create(new { changes = new { fullName = value }, originalValues = new { fullName = "Pessoa de Teste" }, passwordChange = new { currentPassword = OwnerProfileScenario.Password, newPassword = "Outra-Senha!1234", confirmPassword = "Outra-Senha!1234" } });
             return await client.SendAsync(request, token);
         }
 
@@ -76,6 +76,7 @@ public sealed class OwnerProfileContractTests
         await using var db = scenario.Database.CreateContext();
         var owner = await db.Users.AsNoTracking().SingleAsync(x => x.Id == scenario.FirstOwnerId, token);
         Assert.Contains(owner.FullName, new[] { "Nome da primeira aba", "Nome da segunda aba" });
+        Assert.Equal(0, owner.AccessFailedCount);
         Assert.Equal(1, await db.RegistrationAudits.CountAsync(token));
     }
 
@@ -113,6 +114,21 @@ public sealed class OwnerProfileContractTests
     [InlineData("{\"changes\":{\"fullName\":\"Novo\"},\"originalValues\":{}}")]
     [InlineData("{\"changes\":{},\"originalValues\":{},\"ownerId\":\"outro\"}")]
     [InlineData("{\"changes\":{\"fullName\":\"A\",\"fullName\":\"B\"},\"originalValues\":{\"fullName\":\"Pessoa de Teste\"}}")]
+    [InlineData("{\"changes\":null,\"originalValues\":{}}")]
+    [InlineData("{\"changes\":[],\"originalValues\":{}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{\"fullName\":\"Pessoa de Teste\"}}")]
+    [InlineData("{\"changes\":{\"fullName\":null},\"originalValues\":{\"fullName\":\"Pessoa de Teste\"}}")]
+    [InlineData("{\"changes\":{\"fullName\":\"Novo\"},\"originalValues\":{\"fullName\":null}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{},\"passwordChange\":null}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{},\"passwordChange\":{\"currentPassword\":\"x\",\"newPassword\":\"y\"}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{\"passwordHash\":\"x\"}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{},\"changes\":{}}")]
+    [InlineData("{\"originalValues\":{}}")]
+    [InlineData("{\"changes\":{}}")]
+    [InlineData("{\"changes\":{\"fullName\":\"Novo\"},\"originalValues\":{\"fullName\":\"A\",\"fullName\":\"B\"}}")]
+    [InlineData("{\"changes\":{\"ownerId\":\"x\"},\"originalValues\":{\"ownerId\":\"x\"}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{},\"passwordChange\":{\"currentPassword\":\"x\",\"newPassword\":\"y\",\"confirmPassword\":\"y\",\"unknown\":\"z\"}}")]
+    [InlineData("{\"changes\":{},\"originalValues\":{},\"passwordChange\":{\"currentPassword\":\"x\",\"currentPassword\":\"x\",\"newPassword\":\"y\",\"confirmPassword\":\"y\"}}")]
     public async Task InvalidPatchStructureIsRejected(string json)
     {
         var token = TestContext.Current.CancellationToken;
@@ -136,6 +152,7 @@ public sealed class OwnerProfileContractTests
         using var login = await AuthTestClient.LoginAsync(client, token, email: "primeira@example.test");
         Assert.Equal(HttpStatusCode.NoContent, login.StatusCode);
         var csrf = await AuthTestClient.GetCsrfAsync(client, token);
+        var lockoutStartedNoEarlierThan = DateTimeOffset.UtcNow;
         for (var i = 0; i < 5; i++)
         {
             using var request = new HttpRequestMessage(HttpMethod.Patch, "/api/auth/profile");
@@ -144,10 +161,16 @@ public sealed class OwnerProfileContractTests
             using var response = await client.SendAsync(request, token);
             Assert.Equal(i == 4 ? HttpStatusCode.TooManyRequests : HttpStatusCode.BadRequest, response.StatusCode);
         }
+        using var validWhileLocked = new HttpRequestMessage(HttpMethod.Patch, "/api/auth/profile");
+        validWhileLocked.Headers.Add("X-XSRF-TOKEN", csrf);
+        validWhileLocked.Content = JsonContent.Create(new { changes = new { }, originalValues = new { }, passwordChange = new { currentPassword = OwnerProfileScenario.Password, newPassword = "Outra-Senha!1234", confirmPassword = "Outra-Senha!1234" } });
+        using var stillLocked = await client.SendAsync(validWhileLocked, token);
+        Assert.Equal(HttpStatusCode.TooManyRequests, stillLocked.StatusCode);
         await using var db = scenario.Database.CreateContext();
         var owner = await db.Users.AsNoTracking().SingleAsync(x => x.Id == scenario.FirstOwnerId, token);
         Assert.Equal("Pessoa de Teste", owner.FullName);
         Assert.NotNull(owner.LockoutEnd);
+        Assert.InRange(owner.LockoutEnd.Value, lockoutStartedNoEarlierThan.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(5).AddSeconds(5));
         Assert.Equal(0, await db.RegistrationAudits.CountAsync(token));
     }
     [Fact]
@@ -166,6 +189,8 @@ public sealed class OwnerProfileContractTests
         badPassword.Content = JsonContent.Create(new { changes = new { fullName = "Outro Nome" }, originalValues = new { fullName = "Pessoa de Teste" }, passwordChange = new { currentPassword = "Senha-incorreta", newPassword = "Outra-Senha!1234", confirmPassword = "Outra-Senha!1234" } });
         using var rejected = await client.SendAsync(badPassword, token);
         await AuthTestClient.AssertProblemAsync(rejected, 400, "VALIDATION_FAILED", token);
+        using var stillAuthenticated = await client.GetAsync("/api/auth/profile", token);
+        Assert.Equal(HttpStatusCode.OK, stillAuthenticated.StatusCode);
         using var duplicate = new HttpRequestMessage(HttpMethod.Patch, "/api/auth/profile");
         duplicate.Headers.Add("X-XSRF-TOKEN", csrf);
         duplicate.Content = JsonContent.Create(new { changes = new { email = "segunda@example.test" }, originalValues = new { email = "primeira@example.test" } });

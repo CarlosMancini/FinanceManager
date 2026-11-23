@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { dotnetInvariantUpper, dotnetTrim } from './owner-profile-normalization';
 
 export interface OwnerProfile { fullName: string; nickname: string | null; birthDate: string; email: string; phoneNumber: string; }
 export interface PasswordChange { currentPassword: string; newPassword: string; confirmPassword: string; }
@@ -13,12 +14,12 @@ export function profileChanges(original: OwnerProfile, desired: OwnerProfile) {
   for (const key of keys) {
     const normalize = (value: string | null) => {
       if (key === 'phoneNumber') return (value ?? '').replace(/[^0-9]/g, '');
-      if (key === 'email') return (value ?? '').trim().toUpperCase();
-      if (key === 'nickname') return value?.trim() || null;
-      return (value ?? '').trim();
+      if (key === 'email') return dotnetInvariantUpper(dotnetTrim(value ?? ''));
+      if (key === 'nickname') return dotnetTrim(value ?? '') || null;
+      return dotnetTrim(value ?? '');
     };
     if (normalize(original[key]) !== normalize(desired[key])) {
-      changes[key] = key === 'nickname' ? desired.nickname?.trim() || null : desired[key] as string;
+      changes[key] = key === 'nickname' ? dotnetTrim(desired.nickname ?? '') || null : desired[key] as string;
       originalValues[key] = original[key];
     }
   }

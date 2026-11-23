@@ -37,6 +37,42 @@ public sealed class OwnerProfileChangesTests
     }
 
     [Fact]
+    public void RejectsExtraOriginalsAndNullRequiredValues()
+    {
+        Assert.Throws<ArgumentException>(() => new OwnerProfileChanges(new Dictionary<string, string?>(), new Dictionary<string, string?> { ["fullName"] = "Ana" }));
+        foreach (var field in new[] { "fullName", "birthDate", "email", "phoneNumber" })
+        {
+            var invalid = new OwnerProfileChanges(new Dictionary<string, string?> { [field] = null },
+                new Dictionary<string, string?> { [field] = field switch { "fullName" => "Ana", "birthDate" => "1990-01-01", "email" => "ana@example.test", _ => "11999999999" } });
+            Assert.Throws<ArgumentException>(() => invalid.Apply(Current(), Today));
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void EmptyNicknameRemovesIt(string value)
+    {
+        var edits = new OwnerProfileChanges(new Dictionary<string, string?> { ["nickname"] = value },
+            new Dictionary<string, string?> { ["nickname"] = "Nina" });
+        Assert.Null(edits.Apply(Current(), Today).Profile!.Nickname);
+    }
+
+    [Fact]
+    public void RevertedIntermediateChangeRequiresNoFieldHistory()
+    {
+        var intermediate = new OwnerProfileChanges(new Dictionary<string, string?> { ["fullName"] = "Intermediário" },
+            new Dictionary<string, string?> { ["fullName"] = "Ana" }).Apply(Current(), Today).Profile!;
+        var reverted = new OwnerProfileChanges(new Dictionary<string, string?> { ["fullName"] = "Ana" },
+            new Dictionary<string, string?> { ["fullName"] = "Intermediário" }).Apply(intermediate, Today).Profile!;
+        var edits = new OwnerProfileChanges(new Dictionary<string, string?> { ["fullName"] = "Nome novo" },
+            new Dictionary<string, string?> { ["fullName"] = "Ana" });
+        var result = edits.Apply(reverted, Today);
+        Assert.Empty(result.Conflicts);
+        Assert.Equal("Nome novo", result.Profile!.FullName);
+    }
+
+    [Fact]
     public void ComparesNormalizedEmailAndPhone()
     {
         var edits = new OwnerProfileChanges(new Dictionary<string, string?> { ["email"] = "novo@example.test", ["phoneNumber"] = "11988888888" },
@@ -73,6 +109,32 @@ public sealed class OwnerProfileChangesTests
         var result = edits.Apply(current, Today);
 
         Assert.Empty(result.Conflicts);
+    }
+
+    [Theory]
+    [InlineData("josé@example.test", "JOSÉ@EXAMPLE.TEST")]
+    [InlineData("maçã@example.test", "MAÇÃ@EXAMPLE.TEST")]
+    [InlineData("üÿ@example.test", "ÜŸ@EXAMPLE.TEST")]
+    public void AccentedEmailCaseChangesPreserveStoredSpelling(string stored, string desired)
+    {
+        var current = RegistrationProfile.Create("Ana", null, new(1990, 1, 1), stored, "11999999999", Today);
+        var edits = new OwnerProfileChanges(new Dictionary<string, string?> { ["email"] = desired },
+            new Dictionary<string, string?> { ["email"] = stored });
+        Assert.Equal(stored, edits.Apply(current, Today).Profile!.Email);
+    }
+
+    [Fact]
+    public void DoesNotTreatSharpSAsTwoLettersInEmail()
+    {
+        var current = RegistrationProfile.Create("Ana", null, new(1990, 1, 1), "straße@example.test", "11999999999", Today);
+        var edits = new OwnerProfileChanges(
+            new Dictionary<string, string?> { ["email"] = "strasse@example.test" },
+            new Dictionary<string, string?> { ["email"] = "straße@example.test" });
+
+        var result = edits.Apply(current, Today);
+
+        Assert.Empty(result.Conflicts);
+        Assert.Equal("strasse@example.test", result.Profile!.Email);
     }
 
     [Fact]

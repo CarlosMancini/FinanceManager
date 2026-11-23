@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from './auth.service';
 import { OwnerProfile, OwnerProfileService, PasswordChange, profileChanges } from './owner-profile.service';
@@ -43,6 +43,7 @@ import { formatPhone, saoPauloToday, validateRegistration } from './registration
 export class OwnerProfileComponent implements OnInit, OnDestroy {
   private readonly service = inject(OwnerProfileService);
   private readonly auth = inject(AuthService);
+  private readonly element: ElementRef<HTMLElement> = inject(ElementRef);
   readonly loading = signal(false); readonly busy = signal(false); readonly conflict = signal(false);
   readonly changingPassword = signal(false); readonly message = signal(''); readonly errors = signal<Record<string, string>>({});
   original: OwnerProfile | null = null; data: OwnerProfile | null = null; reviewData: OwnerProfile | null = null;
@@ -67,12 +68,19 @@ export class OwnerProfileComponent implements OnInit, OnDestroy {
       if (validation['password']) { validation['newPassword'] = validation['password']; delete validation['password']; }
     }
     this.errors.set(validation);
-    if (Object.keys(validation).length) { this.message.set('Confira os campos informados.'); return; }
+    if (Object.keys(validation).length) {
+      this.message.set('Confira os campos informados.');
+      const first = ['fullName', 'birthDate', 'email', 'phoneNumber', 'currentPassword', 'newPassword', 'confirmPassword'].find(field => validation[field]);
+      if (first) this.element.nativeElement.querySelector<HTMLInputElement>(`input[name="${first}"]`)?.focus();
+      return;
+    }
     this.busy.set(true); this.message.set('');
     try {
       const response = await this.service.update(this.original, this.data, this.changingPassword() ? this.password : undefined);
       this.original = { ...response.profile }; this.data = { ...response.profile, phoneNumber: formatPhone(response.profile.phoneNumber) };
-      this.auth.setProfileEmail(response.profile.email); this.clearPassword(); this.changingPassword.set(false); this.message.set(response.message);
+      this.clearPassword(); this.changingPassword.set(false); this.message.set(response.message);
+      try { this.auth.setProfileEmail(response.profile.email); }
+      catch { this.message.set(`${response.message} Atualize a página para sincronizar a exibição.`); }
     } catch (error) {
       const response = error instanceof HttpErrorResponse ? error.error : null;
       if (response?.errors) this.errors.set(Object.fromEntries(Object.entries(response.errors).map(([key, value]) => [key, Array.isArray(value) ? String(value[0]) : 'Confira o valor informado.'])));

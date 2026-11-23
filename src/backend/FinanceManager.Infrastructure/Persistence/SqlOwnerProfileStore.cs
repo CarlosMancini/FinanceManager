@@ -86,6 +86,8 @@ internal sealed class SqlOwnerProfileStore(FinanceManagerDbContext database, Use
         catch (DbUpdateConcurrencyException) { return new(OwnerProfileOutcome.Conflict); }
         catch (DbUpdateException error) when (error.InnerException is SqlException { Number: 2601 or 2627 } sql && sql.Message.Contains("UX_Owners_NormalizedEmailHash", StringComparison.Ordinal))
         { return new(OwnerProfileOutcome.EmailAlreadyRegistered); }
+        catch (DbUpdateException error) when (error.InnerException is SqlException { Number: 1205 })
+        { return new(OwnerProfileOutcome.Conflict); }
         catch (SqlException error) when (error.Number == 1205) { return new(OwnerProfileOutcome.Conflict); }
     }
 
