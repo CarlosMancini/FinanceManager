@@ -64,12 +64,18 @@ function Invoke-ContainerExclusive {
 }
 
 function Receive-ContainerImages {
+    param([switch] $LocalAppImage)
     foreach ($name in @('APP_IMAGE', 'SQL_IMAGE')) {
         $reference = [Environment]::GetEnvironmentVariable($name)
         if ([string]::IsNullOrWhiteSpace($reference) -or
             $reference -notmatch '(@sha256:[0-9a-fA-F]{64}|:[^/:]+)$' -or
             $reference -match ':latest$') {
             throw "Configure uma imagem identificada para $name."
+        }
+        if ($name -eq 'APP_IMAGE' -and $LocalAppImage) {
+            & docker image inspect $reference *> $null
+            if ($LASTEXITCODE -ne 0) { throw 'A imagem local da aplicação não foi encontrada.' }
+            continue
         }
         & docker pull $reference
         if ($LASTEXITCODE -ne 0) {

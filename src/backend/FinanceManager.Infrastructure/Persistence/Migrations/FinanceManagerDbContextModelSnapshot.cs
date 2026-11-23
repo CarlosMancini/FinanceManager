@@ -573,7 +573,7 @@ namespace FinanceManager.Infrastructure.Persistence.Migrations
 
                     b.ToTable("RegistrationAudits", null, t =>
                         {
-                            t.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted')");
+                            t.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted', N'ProfileUpdated')");
                         });
                 });
 

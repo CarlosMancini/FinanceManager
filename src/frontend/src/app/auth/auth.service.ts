@@ -10,6 +10,8 @@ export class AuthService {
   private readonly current = signal<string | null>(null);
   readonly email = this.current.asReadonly();
 
+  setProfileEmail(email: string): void { this.current.set(email); }
+
   async restore(): Promise<boolean> {
     try {
       const session = await firstValueFrom(this.http.get<{ email: string }>('/api/auth/session'));
@@ -62,7 +64,7 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   return next(request).pipe(catchError((error: unknown) => {
     if (error instanceof HttpErrorResponse && error.status === 401 &&
-        (request.url.startsWith('/api/accounts') || request.url.startsWith('/api/transactions') || request.url.startsWith('/api/bills') || request.url === '/api/auth/logout')) {
+        (request.url.startsWith('/api/accounts') || request.url.startsWith('/api/transactions') || request.url.startsWith('/api/bills') || request.url === '/api/auth/logout' || request.url === '/api/auth/profile')) {
       auth.expire();
     }
     return throwError(() => error);

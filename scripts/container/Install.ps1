@@ -1,5 +1,6 @@
 param(
-    [string] $ConfigurationPath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) '.env')
+    [string] $ConfigurationPath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) '.env'),
+    [string] $LocalAppImage
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,6 +18,7 @@ try {
         [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
     }
 
+    if ($LocalAppImage) { $env:APP_IMAGE = $LocalAppImage }
     Assert-ContainerEnvironment
     foreach ($name in @('SQL_MIGRATION_USER', 'SQL_MIGRATION_PASSWORD', 'SQL_APP_USER', 'SQL_APP_PASSWORD')) {
         if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
@@ -48,7 +50,7 @@ try {
     }
 
     Invoke-ContainerExclusive {
-        Receive-ContainerImages
+        Receive-ContainerImages -LocalAppImage:([bool]$LocalAppImage)
         $compose = Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'compose.yaml'
         & docker compose -p $env:COMPOSE_PROJECT_NAME -f $compose up -d --wait --wait-timeout 180 sql
         if ($LASTEXITCODE -ne 0) { throw 'O SQL Server não ficou disponível.' }

@@ -1,6 +1,6 @@
 namespace FinanceManager.Infrastructure.Persistence;
 
-public enum RegistrationAuditAction { Registered, RegistrationCompleted }
+public enum RegistrationAuditAction { Registered, RegistrationCompleted, ProfileUpdated }
 
 public sealed class RegistrationAudit
 {

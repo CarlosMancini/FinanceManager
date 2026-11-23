@@ -90,7 +90,7 @@ public sealed class FinanceManagerDbContext(DbContextOptions<FinanceManagerDbCon
         });
         builder.Entity<RegistrationAudit>(audit =>
         {
-            audit.ToTable("RegistrationAudits", table => table.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted')"));
+            audit.ToTable("RegistrationAudits", table => table.HasCheckConstraint("CK_RegistrationAudits_Action", "[Action] IN (N'Registered', N'RegistrationCompleted', N'ProfileUpdated')"));
             audit.HasKey(row => row.Id);
             audit.Property(row => row.Id).ValueGeneratedOnAdd();
             audit.Property(row => row.Action).HasConversion<string>().HasMaxLength(32);
